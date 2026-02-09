@@ -27,7 +27,19 @@ sleep 2
 
 # 2. Start Frontend
 echo "Starting Next.js Frontend (Port 3000)..."
-pnpm dev
+pnpm dev &
+FRONTEND_PID=$!
 
-# Wait for both
-wait
+# Wait for Frontend to be ready
+echo "Waiting for frontend to be ready..."
+while ! nc -z localhost 3000; do   
+  sleep 1
+done
+echo "Frontend is ready!"
+
+# 3. Start Electron
+echo "Starting Electron..."
+npm run electron
+
+# When Electron exits, kill everything
+cleanup
