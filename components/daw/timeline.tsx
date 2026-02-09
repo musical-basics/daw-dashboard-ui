@@ -87,7 +87,7 @@ export default function Timeline({ videoUrl, midiUrl, currentTime, isRecording =
                   style={{
                     left: 0,
                     width: `${playheadLeft}px`,
-                    transition: 'width 0.1s linear'
+                    // transition: 'width 0.1s linear' // Remove transition for instant sync
                   }}
                 />
               )}

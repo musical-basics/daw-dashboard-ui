@@ -254,12 +254,7 @@ export default function PianoRoll({ midiUrl, currentTime, isRecording }: PianoRo
 
       {/* Grid area */}
       {/* Grid area - Container should fill parent width */}
-      <div
-        className="flex-1 relative"
-        style={{ height: "400px", overflowY: "auto" }} // Keep vertical scroll for notes? Or let Timeline handle it? 
-      // User asked for "scroll down to see range", implying vertical scroll.
-      // If we put vertical scroll here, we need strict height.
-      >
+      <div className="flex-1 relative">
         <div className="relative" style={{ height: NOTE_NAMES.length * ROW_HEIGHT, width: "100%" }}>
           {/* Row backgrounds */}
           {NOTE_NAMES.map((note, i) => (
