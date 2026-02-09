@@ -9,6 +9,12 @@
     "lint": "eslint .",
     "electron": "electron electron-main.js"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "sharp"
+    ]
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
