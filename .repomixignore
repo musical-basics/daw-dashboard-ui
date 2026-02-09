@@ -1,0 +1,14 @@
+node_modules/**
+.git/**
+.next/**
+dist/**
+.DS_Store
+pnpm-lock.yaml
+repomix-output.xml
+repomix-output.txt
+**/*.svg
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.ico
+**/*.gif
