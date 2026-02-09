@@ -13,4 +13,8 @@ node_modules/
 
 # Repomix output
 repomix-output.xml
-repomix-output.txt
+repomix-output.txtrecordings/
+__pycache__/
+backend/__pycache__/
+.venv/
+venv/
