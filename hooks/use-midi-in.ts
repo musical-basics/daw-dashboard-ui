@@ -14,14 +14,34 @@ export function useMidiIn() {
     const lastActivityTime = useRef<number>(0);
 
     useEffect(() => {
+        let midiInput: any = null;
+
         const enableMidi = async () => {
             try {
                 await WebMidi.enable();
                 const inputName = localStorage.getItem("midiPortName");
+
+                // Cleanup previous input listeners if any
+                if (midiInput) {
+                    try {
+                        midiInput.removeListener("noteon");
+                        midiInput.removeListener("noteoff");
+                    } catch (e) {
+                        console.warn("Cleanup error", e);
+                    }
+                    midiInput = null;
+                }
+
                 if (!inputName) return;
 
                 const input = WebMidi.getInputByName(inputName);
-                if (!input) return;
+                if (!input) {
+                    console.warn(`MIDI input ${inputName} not found`);
+                    return;
+                }
+
+                midiInput = input;
+                console.log(`Listening to MIDI input: ${inputName}`);
 
                 // Note On
                 input.addListener("noteon", e => {
@@ -54,6 +74,16 @@ export function useMidiIn() {
 
         enableMidi();
 
+        // Listen for port changes
+        const handlePortChange = () => {
+            console.log("MIDI port changed, refreshing connection...");
+            enableMidi();
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener("midi-port-changed", handlePortChange);
+        }
+
         // Cleanup activity light
         const interval = setInterval(() => {
             if (Date.now() - lastActivityTime.current > 150) {
@@ -64,6 +94,9 @@ export function useMidiIn() {
         return () => {
             WebMidi.disable();
             clearInterval(interval);
+            if (typeof window !== 'undefined') {
+                window.removeEventListener("midi-port-changed", handlePortChange);
+            }
         };
     }, []);
 
