@@ -96,6 +96,5 @@ export default function Timeline({ videoUrl, midiUrl, currentTime, isRecording =
         </div>
       </div>
     </div>
-    </div >
   );
 }
