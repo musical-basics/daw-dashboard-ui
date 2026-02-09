@@ -36,7 +36,10 @@ export default function SettingsDialog() {
 
     const handleSave = () => {
         if (selectedAudio) localStorage.setItem("audioDeviceIndex", selectedAudio);
-        if (selectedMidi) localStorage.setItem("midiPortName", selectedMidi);
+        if (selectedMidi) {
+            localStorage.setItem("midiPortName", selectedMidi);
+            window.dispatchEvent(new Event("midi-port-changed"));
+        }
         setOpen(false);
         // Optional: toast.success("Settings saved");
     };
