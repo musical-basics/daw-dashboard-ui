@@ -3,6 +3,8 @@ import { useState } from "react";
 import { SkipBack, Play, Square, Circle, Pause, ChevronDown } from "lucide-react";
 import { useRecorder } from "@/hooks/use-recorder";
 import { ExportModal } from "./export-modal";
+import SettingsDialog from "./settings-dialog";
+import FileBrowser from "./file-browser";
 
 interface TransportBarProps {
   isPlaying: boolean;
@@ -43,6 +45,7 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
 
   return (
     <header className="flex items-center justify-between bg-card border-b border-border px-4 py-2">
+      {/* Left: Logo */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="h-6 w-6 rounded bg-primary/20 flex items-center justify-center">
@@ -50,10 +53,12 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
           </div>
           <span className="font-mono text-sm font-bold tracking-wider text-primary">SYNTHWAVE</span>
         </div>
-        <div className="h-5 w-px bg-border" />
-        <span className="text-xs text-muted-foreground font-mono">v1.0</span>
+        {/* ADD FILE BROWSER HERE */}
+        <div className="h-5 w-px bg-border mx-2" />
+        <FileBrowser />
       </div>
 
+      {/* Center: Transport Controls (Keep existing) */}
       <div className="flex items-center gap-2">
         <button onClick={onRewind} className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-secondary text-secondary-foreground transition-all hover:bg-border hover:text-foreground" aria-label="Rewind">
           <SkipBack className="h-4 w-4" />
@@ -76,7 +81,14 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
         </div>
       </div>
 
+      {/* Right: Settings & Export */}
       <div className="flex items-center gap-3">
+        {/* ADD SETTINGS HERE */}
+        <SettingsDialog />
+
+        <div className="h-5 w-px bg-border" />
+
+        {/* BPM (Keep existing) */}
         <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5">
           <span className="text-xs text-muted-foreground font-mono">BPM</span>
           {bpmEditing ? (

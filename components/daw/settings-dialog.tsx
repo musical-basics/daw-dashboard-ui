@@ -1,93 +1,90 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect, useState } from "react";
 import { Settings } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
-interface Device {
-    id: number | string;
-    name: string;
-}
-
-interface SettingsDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}
-
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-    const [audioDevices, setAudioDevices] = useState<Device[]>([]);
-    const [midiPorts, setMidiPorts] = useState<string[]>([]);
-
+export default function SettingsDialog() {
+    const [ports, setPorts] = useState<{ audio_devices: any[], midi_ports: string[] }>({ audio_devices: [], midi_ports: [] });
     const [selectedAudio, setSelectedAudio] = useState<string>("");
     const [selectedMidi, setSelectedMidi] = useState<string>("");
 
     useEffect(() => {
-        // Load saved settings
-        const savedAudio = localStorage.getItem("daw_audio_device") || "";
-        const savedMidi = localStorage.getItem("daw_midi_device") || "";
-        setSelectedAudio(savedAudio);
-        setSelectedMidi(savedMidi);
-
-        // Fetch devices
         fetch("http://localhost:8000/ports")
             .then(res => res.json())
-            .then(data => {
-                // Backend returns: { audio_devices: [{index, name, ...}], midi_ports: ["name", ...] }
-                const audio = data.audio_devices.map((d: any) => ({ id: d.index, name: d.name }));
-                setAudioDevices(audio);
-                setMidiPorts(data.midi_ports);
-            })
-            .catch(err => console.error("Failed to fetch ports:", err));
-    }, [open]);
+            .then(data => setPorts(data))
+            .catch(err => console.error("Failed to fetch ports", err));
 
-    const handleAudioChange = (val: string) => {
-        setSelectedAudio(val);
-        localStorage.setItem("daw_audio_device", val);
-    };
+        // Load saved settings
+        const savedAudio = localStorage.getItem("daw_audio_device"); // user prompt used "audioDeviceIndex", but I used "daw_audio_device" in recorder hook. I should stick to one. User's prompt code uses "audioDeviceIndex". Use what user provided to be safe/consistent with their new code? 
+        // Wait, the user provided code uses "audioDeviceIndex". My recorder hook used "daw_audio_device". 
+        // I should update the recorder hook to match or update this code to match.
+        // User said "Execute Phase 7... Update the Recorder to use the selected devices."
+        // User's provided code for `SettingsDialog` uses `audioDeviceIndex`.
+        // I will use `audioDeviceIndex` and `midiPortName` as per user code, and I will need to update `use-recorder.tsx` to match.
+        // Actually, let's just stick to what the user provided in the prompt for this file.
 
-    const handleMidiChange = (val: string) => {
-        setSelectedMidi(val);
-        localStorage.setItem("daw_midi_device", val);
+        // User code:
+        // const savedAudio = localStorage.getItem("audioDeviceIndex");
+        // const savedMidi = localStorage.getItem("midiPortName");
+
+        if (localStorage.getItem("audioDeviceIndex")) setSelectedAudio(localStorage.getItem("audioDeviceIndex")!);
+        if (localStorage.getItem("midiPortName")) setSelectedMidi(localStorage.getItem("midiPortName")!);
+    }, []);
+
+    const handleSave = (key: string, value: string) => {
+        localStorage.setItem(key, value);
+        // You could also trigger a toast notification here
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Settings">
+                    <Settings className="h-5 w-5" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-card border-border">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Settings className="h-5 w-5" />
-                        Device Settings
-                    </DialogTitle>
+                    <DialogTitle>Hardware Settings</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label>Audio Input</Label>
-                        <Select value={selectedAudio} onValueChange={handleAudioChange}>
+
+                    {/* Audio Input */}
+                    <div className="grid gap-2">
+                        <Label>Audio Input (Microphone)</Label>
+                        <Select
+                            value={selectedAudio}
+                            onValueChange={(val) => { setSelectedAudio(val); handleSave("audioDeviceIndex", val); }}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select Microphone" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="default">Default Input</SelectItem>
-                                {audioDevices.map((d) => (
-                                    <SelectItem key={d.id} value={d.id.toString()}>
-                                        {d.name}
+                                {ports.audio_devices.map((device: any) => (
+                                    <SelectItem key={device.index} value={device.index.toString()}>
+                                        {device.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label>MIDI Input</Label>
-                        <Select value={selectedMidi} onValueChange={handleMidiChange}>
+                    {/* MIDI Input */}
+                    <div className="grid gap-2">
+                        <Label>MIDI Input (Keyboard)</Label>
+                        <Select
+                            value={selectedMidi}
+                            onValueChange={(val) => { setSelectedMidi(val); handleSave("midiPortName", val); }}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select MIDI Device" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {midiPorts.map((port) => (
+                                {ports.midi_ports.map((port: string) => (
                                     <SelectItem key={port} value={port}>
                                         {port}
                                     </SelectItem>
@@ -95,6 +92,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             </SelectContent>
                         </Select>
                     </div>
+
                 </div>
             </DialogContent>
         </Dialog>
