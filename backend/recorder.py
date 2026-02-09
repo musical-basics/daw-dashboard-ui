@@ -21,7 +21,7 @@ class MultiTrackRecorder:
         # Audio config
         self.chunk = 1024
         self.format = pyaudio.paInt16
-        self.channels = 2
+        self.channels = 2 # Will be updated based on device cap
         self.rate = 44100
         self.audio_frames = []
         
@@ -75,12 +75,32 @@ class MultiTrackRecorder:
 
     def _record_audio(self, device_index):
         p = pyaudio.PyAudio()
-        stream = p.open(format=self.format,
-                        channels=self.channels,
-                        rate=self.rate,
-                        input=True,
-                        input_device_index=device_index,
-                        frames_per_buffer=self.chunk)
+        
+        # Determine channels for this device
+        try:
+            dev_info = p.get_device_info_by_host_api_device_index(0, device_index)
+            max_channels = int(dev_info.get('maxInputChannels'))
+            # Use 2 if available, otherwise mono
+            channels = min(2, max_channels)
+            if channels < 1: channels = 1 # Fallback
+        except Exception as e:
+            print(f"Error getting device info: {e}")
+            channels = 1
+            
+        self.channels = channels # Update class var for saving later
+        
+        try:
+            stream = p.open(format=self.format,
+                            channels=self.channels,
+                            rate=self.rate,
+                            input=True,
+                            input_device_index=device_index,
+                            frames_per_buffer=self.chunk)
+        except Exception as e:
+            print(f"Error opening audio stream: {e}")
+            p.terminate()
+            return
+        
         
         while self.is_recording:
             data = stream.read(self.chunk)

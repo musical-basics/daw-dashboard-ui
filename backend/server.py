@@ -22,7 +22,7 @@ def load_config():
 
 def save_config(config):
     with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=4) // turbo-all
+        json.dump(config, f, indent=4)
 
 app = FastAPI()
 
