@@ -55,7 +55,31 @@ def get_latest_recording():
         print(f"Error getting latest: {e}")
         return {"video": None, "audio": None, "midi": None}
 
-
+@app.get("/recordings/list")
+def list_recordings():
+    try:
+        # List sessions (using video files as the anchor)
+        files = glob.glob("recordings/*_video.mp4")
+        recordings = []
+        for f in files:
+            stat = os.stat(f)
+            # Extract session ID from filename: session_YYYYMMDD_HHMMSS_video.mp4
+            basename = os.path.basename(f)
+            session_id = basename.replace("_video.mp4", "")
+            
+            recordings.append({
+                "id": session_id,
+                "name": basename,
+                "size": f"{stat.st_size / (1024*1024):.1f} MB",
+                "timestamp": stat.st_mtime
+            })
+        
+        # Sort by timestamp descending (newest first)
+        recordings.sort(key=lambda x: x["timestamp"], reverse=True)
+        return recordings
+    except Exception as e:
+        print(f"Error listing recordings: {e}")
+        return []
 @app.get("/health")
 def health_check():
     return {"status": "ok"}

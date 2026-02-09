@@ -25,9 +25,6 @@ export function useProject() {
             }
             const data = await response.json();
 
-            // Add cache busting or ensure backend returns fresh URLs if needed
-            // For now, assuming direct URLs
-
             setProjectState({
                 videoUrl: data.video,
                 audioUrl: data.audio,
@@ -40,10 +37,36 @@ export function useProject() {
             }
         } catch (error) {
             console.error("Error loading latest take:", error);
-            toast.error("Failed to load latest take");
+            // toast.error("Failed to load latest take"); // Optional: suppress if just empty
             setProjectState(prev => ({ ...prev, isLoading: false }));
         }
     }, []);
+
+    useEffect(() => {
+        loadLatestTake();
+
+        const handleLoadSession = (e: any) => {
+            const sessionId = e.detail?.id;
+            if (sessionId) {
+                setProjectState({
+                    videoUrl: `http://localhost:8000/files/${sessionId}_video.mp4`,
+                    audioUrl: `http://localhost:8000/files/${sessionId}_audio.wav`,
+                    midiUrl: `http://localhost:8000/files/${sessionId}_midi.mid`,
+                    isLoading: false,
+                });
+                toast.success(`Loaded session: ${sessionId}`);
+            }
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener("load-session", handleLoadSession);
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener("load-session", handleLoadSession);
+            }
+        };
+    }, [loadLatestTake]);
 
     return {
         ...projectState,

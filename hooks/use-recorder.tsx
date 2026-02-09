@@ -21,6 +21,13 @@ export function useRecorder(): RecorderState & RecorderActions {
         setIsConnecting(true);
         setError(null);
         try {
+            // Read settings from localStorage
+            const savedAudio = localStorage.getItem("daw_audio_device");
+            const savedMidi = localStorage.getItem("daw_midi_device");
+
+            const audioIndex = savedAudio && savedAudio !== "default" ? parseInt(savedAudio) : null;
+            const midiPort = savedMidi && savedMidi !== "none" ? savedMidi : null;
+
             const response = await fetch('http://localhost:8000/record/start', {
                 method: 'POST',
                 headers: {
@@ -28,7 +35,8 @@ export function useRecorder(): RecorderState & RecorderActions {
                 },
                 body: JSON.stringify({
                     video_device_index: 0,
-                    // Add other configurable parameters here if needed
+                    audio_device_index: audioIndex,
+                    midi_port_name: midiPort,
                 }),
             });
 
