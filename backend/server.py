@@ -6,7 +6,23 @@ from typing import Optional
 import os
 import glob
 import uvicorn
+import json
 from .recorder import MultiTrackRecorder
+
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4) // turbo-all
 
 app = FastAPI()
 
@@ -27,8 +43,13 @@ app.mount("/files", StaticFiles(directory="recordings"), name="recordings")
 recorder = MultiTrackRecorder()
 
 class StartRecordRequest(BaseModel):
-    video_device_index: int = 0
+    video_device_index: Optional[int] = None
     audio_device_index: Optional[int] = None
+    midi_port_name: Optional[str] = None
+
+class ConfigRequest(BaseModel):
+    video_device_index: Optional[str] = None # Using str to match frontend state, or int? Frontend sends strings for Select. Let's use str and cast.
+    audio_device_index: Optional[str] = None
     midi_port_name: Optional[str] = None
 
 @app.get("/recordings/latest")
@@ -108,13 +129,29 @@ def stop_recording():
     session_id = recorder.stop_recording()
     return {"status": "stopped", "session_id": session_id}
 
-@app.get("/ports")
-def get_ports():
     return {
         "audio_devices": recorder.get_audio_devices(),
         "midi_ports": recorder.get_midi_ports(),
         "video_devices": recorder.get_video_devices()
     }
+
+@app.get("/config")
+def get_config():
+    return load_config()
+
+@app.post("/config")
+def update_config(cfg: ConfigRequest):
+    current = load_config()
+    # Update only provided fields
+    if cfg.video_device_index is not None:
+        current["videoDeviceIndex"] = cfg.video_device_index
+    if cfg.audio_device_index is not None:
+        current["audioDeviceIndex"] = cfg.audio_device_index
+    if cfg.midi_port_name is not None:
+        current["midiPortName"] = cfg.midi_port_name
+    
+    save_config(current)
+    return {"status": "saved", "config": current}
 
 from .renderer import render_project
 

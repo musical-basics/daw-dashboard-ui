@@ -34,32 +34,59 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 }))
                 .catch(err => console.error("Failed to fetch ports", err));
 
-            // Reset to saved values
-            const savedAudio = localStorage.getItem("audioDeviceIndex");
-            const savedMidi = localStorage.getItem("midiPortName");
-            const savedVideo = localStorage.getItem("videoDeviceIndex");
+            // Fetch saved config from backend
+            fetch("http://localhost:8000/config")
+                .then(res => res.json())
+                .then(config => {
+                    // Fallback to localStorage if backend config is empty? 
+                    // Or prioritize backend. Let's prioritize backend.
+                    const savedAudio = config.audioDeviceIndex || localStorage.getItem("audioDeviceIndex") || "";
+                    const savedMidi = config.midiPortName || localStorage.getItem("midiPortName") || "";
+                    const savedVideo = config.videoDeviceIndex || localStorage.getItem("videoDeviceIndex") || "0";
 
-            setSelectedAudio(savedAudio || "");
-            setSelectedMidi(savedMidi || "");
-            setSelectedVideo(savedVideo || "0"); // Default to 0
+                    setSelectedAudio(savedAudio);
+                    setSelectedMidi(savedMidi);
+                    setSelectedVideo(savedVideo);
+                })
+                .catch(err => {
+                    console.error("Failed to fetch config", err);
+                    // Fallback to localStorage
+                    setSelectedAudio(localStorage.getItem("audioDeviceIndex") || "");
+                    setSelectedMidi(localStorage.getItem("midiPortName") || "");
+                    setSelectedVideo(localStorage.getItem("videoDeviceIndex") || "0");
+                });
         }
     }, [open]);
 
     const handleSave = () => {
-        // Ensure we save the string value
+        const newConfig: any = {};
+
+        // Update LocalStorage AND Prepare Backend Config
         if (selectedAudio !== "") {
             localStorage.setItem("audioDeviceIndex", selectedAudio);
+            newConfig.audio_device_index = selectedAudio;
         }
         if (selectedVideo !== "") {
             localStorage.setItem("videoDeviceIndex", selectedVideo);
+            newConfig.video_device_index = selectedVideo;
         }
         if (selectedMidi !== "") {
             localStorage.setItem("midiPortName", selectedMidi);
+            newConfig.midi_port_name = selectedMidi;
+
             // Dispatch event for other components to pick up immediately
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new Event("midi-port-changed"));
             }
         }
+
+        // Save to Backend
+        fetch("http://localhost:8000/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newConfig)
+        }).catch(err => console.error("Failed to save config to backend", err));
+
         onOpenChange(false);
         toast.success("Settings saved");
     };

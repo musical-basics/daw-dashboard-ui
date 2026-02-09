@@ -21,14 +21,32 @@ export function useRecorder(): RecorderState & RecorderActions {
         setIsConnecting(true);
         setError(null);
         try {
-            // Read settings from localStorage
-            const savedAudio = localStorage.getItem("audioDeviceIndex");
-            const savedMidi = localStorage.getItem("midiPortName");
-            const savedVideo = localStorage.getItem("videoDeviceIndex");
+            // Read settings from localStorage (which should be synced with backend on app start/settings open)
+            // Ideally, we could also fetch /config here to be 100% sure, but let's trust localStorage for speed
+            // OR fetch config if localStorage is missing?
+            // Let's trying fetching config first for robustness
+            let audioIndex: number | null = null;
+            let midiPort: string | null = null;
+            let videoIndex: number = 0;
 
-            const audioIndex = savedAudio && savedAudio !== "default" ? parseInt(savedAudio) : null;
-            const midiPort = savedMidi && savedMidi !== "none" ? savedMidi : null;
-            const videoIndex = savedVideo ? parseInt(savedVideo) : 0;
+            try {
+                const configRes = await fetch("http://localhost:8000/config");
+                const config = await configRes.json();
+
+                if (config.audioDeviceIndex) audioIndex = parseInt(config.audioDeviceIndex);
+                if (config.midiPortName) midiPort = config.midiPortName;
+                if (config.videoDeviceIndex) videoIndex = parseInt(config.videoDeviceIndex);
+            } catch (e) {
+                console.warn("Failed to fetch config for recording, falling back to defaults", e);
+                // Fallback to localStorage
+                const savedAudio = localStorage.getItem("audioDeviceIndex");
+                const savedMidi = localStorage.getItem("midiPortName");
+                const savedVideo = localStorage.getItem("videoDeviceIndex");
+
+                audioIndex = savedAudio && savedAudio !== "default" ? parseInt(savedAudio) : null;
+                midiPort = savedMidi && savedMidi !== "none" ? savedMidi : null;
+                videoIndex = savedVideo ? parseInt(savedVideo) : 0;
+            }
 
             const response = await fetch('http://localhost:8000/record/start', {
                 method: 'POST',
