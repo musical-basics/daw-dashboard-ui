@@ -59,7 +59,7 @@ export default function Timeline() {
           </div>
 
           {/* Playhead on ruler */}
-          <div className="absolute top-0 bottom-0 w-px bg-primary/60 z-10" style={{ left: "15%" }}>
+          <div className="absolute top-0 bottom-0 w-px bg-primary/60 z-10 transition-all duration-75 ease-linear" style={{ left: playheadLeft }}>
             <div className="absolute -bottom-px left-1/2 -translate-x-1/2 w-3 h-1.5 bg-primary rounded-t-sm" />
           </div>
         </div>

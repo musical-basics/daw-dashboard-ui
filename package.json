@@ -57,7 +57,9 @@
     "sonner": "^1.7.1",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "tone": "^15.1.22",
     "vaul": "^1.1.2",
+    "webmidi": "^3.1.14",
     "zod": "^3.24.1"
   },
   "devDependencies": {

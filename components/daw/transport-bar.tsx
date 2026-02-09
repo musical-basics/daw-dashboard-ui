@@ -74,10 +74,7 @@ export default function TransportBar() {
     }
   };
 
-  const handleRewind = () => {
-    setTime(0);
-    if (!isPlaying) stopTimer();
-  };
+
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -106,7 +103,7 @@ export default function TransportBar() {
       <div className="flex items-center gap-2">
         {/* Rewind */}
         <button
-          onClick={handleRewind}
+          onClick={onRewind}
           className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-secondary text-secondary-foreground transition-all hover:bg-border hover:text-foreground"
           aria-label="Rewind"
         >
@@ -153,7 +150,7 @@ export default function TransportBar() {
 
         {/* Time display */}
         <div className="ml-3 rounded-md border border-border bg-background px-4 py-1.5 font-mono text-lg tracking-widest text-primary tabular-nums shadow-[inset_0_1px_3px_rgba(0,0,0,0.3)]">
-          {formatTime(time)}
+          {formatTime(currentTime)}
         </div>
       </div>
 
