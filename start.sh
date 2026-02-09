@@ -10,34 +10,38 @@ cleanup() {
 # Trap Ctrl+C (SIGINT)
 trap cleanup SIGINT
 
-echo "Starting DAW Dashboard..."
+# --- CONFIGURATION ---
+# We force Port 3005 to avoid conflict with your other apps
+export PORT=3005
+export ELECTRON_START_URL="http://localhost:$PORT"
+
+echo "Starting DAW Dashboard on Port $PORT..."
 
 # 1. Start Python Backend
 echo "Starting Python Backend (Port 8000)..."
-# Check if virtual environment exists, activate if so (standard convention)
 if [ -d "venv" ]; then
     source venv/bin/activate
 fi
-# Run server module
 python3 -m backend.server &
 BACKEND_PID=$!
 
-# Wait a moment for backend to initialize
 sleep 2
 
-# 2. Start Frontend
-echo "Starting Next.js Frontend (Port 3000)..."
-pnpm dev &
+# 2. Start Frontend (Force Port)
+echo "Starting Next.js Frontend..."
+# We use 'next dev' directly to pass the -p flag easily, 
+# or we pass the PORT env var which Next.js respects.
+PORT=$PORT pnpm dev &
 FRONTEND_PID=$!
 
-# Wait for Frontend to be ready
-echo "Waiting for frontend to be ready..."
-while ! nc -z localhost 3000; do   
+# Wait for the CORRECT port to be ready
+echo "Waiting for frontend on port $PORT..."
+while ! nc -z localhost $PORT; do   
   sleep 1
 done
-echo "Frontend is ready!"
+echo "Frontend is ready on port $PORT!"
 
-# 3. Start Electron
+# 3. Start Electron (It will read ELECTRON_START_URL)
 echo "Starting Electron..."
 pnpm electron
 
