@@ -17,6 +17,12 @@ export function useMidiIn(isRecording: boolean = false) {
     const [recordedNotes, setRecordedNotes] = useState<ActiveNote[]>([]); // New local buffer
     const [isActivityDetected, setIsActivityDetected] = useState(false);
     const lastActivityTime = useRef<number>(0);
+    const isRecordingRef = useRef(isRecording);
+
+    // Keep ref in sync
+    useEffect(() => {
+        isRecordingRef.current = isRecording;
+    }, [isRecording]);
 
     // Reset local notes when recording starts/stops
     useEffect(() => {
@@ -69,7 +75,7 @@ export function useMidiIn(isRecording: boolean = false) {
                     setActiveNotes(prev => [...prev, note]);
 
                     // RECORDING LOGIC
-                    if (isRecording) {
+                    if (isRecordingRef.current) {
                         setRecordedNotes(prev => [...prev, { ...note, isFinished: false }]);
                     }
 
@@ -84,7 +90,7 @@ export function useMidiIn(isRecording: boolean = false) {
                     setActiveNotes(prev => prev.filter(n => n.note !== e.note.number));
 
                     // RECORDING LOGIC
-                    if (isRecording) {
+                    if (isRecordingRef.current) {
                         setRecordedNotes(prev => prev.map(n => {
                             // Find the matching note that hasn't finished yet
                             if (n.note === e.note.number && !n.isFinished) {
@@ -128,8 +134,8 @@ export function useMidiIn(isRecording: boolean = false) {
             if (typeof window !== 'undefined') {
                 window.removeEventListener("midi-port-changed", handlePortChange);
             }
-        };
-    }, [isRecording]); // Re-bind if recording state changes to ensure closure captures it? 
+        }
+    }, []); // Run once on mount 
 
     return { activeNotes, recordedNotes, isActivityDetected };
 }

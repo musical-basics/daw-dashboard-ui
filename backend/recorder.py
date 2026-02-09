@@ -5,6 +5,8 @@ import mido
 import threading
 import time
 import os
+import subprocess
+import re
 from datetime import datetime
 
 class MultiTrackRecorder:
@@ -180,10 +182,43 @@ class MultiTrackRecorder:
 
     def get_video_devices(self):
         devices = []
-        # Checks the first 5 indexes
-        for i in range(5):
-            cap = cv2.VideoCapture(i)
-            if cap.isOpened():
-                devices.append({"index": i, "name": f"Camera {i}"})
-                cap.release()
+        try:
+            # Run ffmpeg command to list devices
+            # ffmpeg writes to stderr
+            cmd = ['ffmpeg', '-f', 'avfoundation', '-list_devices', 'true', '-i', '']
+            result = subprocess.run(cmd, stderr=subprocess.PIPE, text=True)
+            output = result.stderr
+            
+            lines = output.split('\n')
+            parsing_video = False
+            
+            for line in lines:
+                if "AVFoundation video devices:" in line:
+                    parsing_video = True
+                    continue
+                if "AVFoundation audio devices:" in line:
+                    parsing_video = False
+                    break
+                    
+                if parsing_video:
+                    # Match pattern like: [AVFoundation indev @ 0x...] [0] FaceTime HD Camera
+                    # or just: [0] FaceTime HD Camera depending on version/output
+                    # Regex to find [N] Some Name
+                    match = re.search(r'\[(\d+)\] (.*)', line)
+                    if match:
+                        index = int(match.group(1))
+                        name = match.group(2).strip()
+                        # Verify this index works with cv2? 
+                        # Usually AVFoundation index maps to cv2 index on mac if using avfoundation backend
+                        devices.append({"index": index, "name": name})
+                        
+        except Exception as e:
+            print(f"Error listing video devices: {e}")
+            # Fallback
+            for i in range(3):
+                cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    devices.append({"index": i, "name": f"Camera {i}"})
+                    cap.release()
+                    
         return devices
