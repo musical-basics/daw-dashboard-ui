@@ -10,9 +10,14 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import { useRecorder } from "@/hooks/use-recorder";
+
 export default function TransportBar() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  // Remove local isRecording state
+  // const [isRecording, setIsRecording] = useState(false);
+  const { isRecording: isRecordingState, isConnecting, startRecording, stopRecording } = useRecorder();
+
   const [time, setTime] = useState(0);
   const [bpm, setBpm] = useState(120);
   const [bpmEditing, setBpmEditing] = useState(false);
@@ -46,19 +51,24 @@ export default function TransportBar() {
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsPlaying(false);
-    setIsRecording(false);
+    if (isRecordingState) {
+      await stopRecording();
+    }
     stopTimer();
   };
 
-  const handleRecord = () => {
-    if (isRecording) {
-      setIsRecording(false);
+  const handleRecord = async () => {
+    if (isRecordingState) {
+      await stopRecording();
       setIsPlaying(false);
       stopTimer();
     } else {
-      setIsRecording(true);
+      await startRecording();
+      // Only start playing/timer if recording successfully started
+      // But since startRecording is async, we might want to check isRecordingState
+      // For now, let's assume if it doesn't throw, it started.
       setIsPlaying(true);
       startTimer();
     }
@@ -106,11 +116,10 @@ export default function TransportBar() {
         {/* Play/Pause */}
         <button
           onClick={handlePlay}
-          className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all ${
-            isPlaying && !isRecording
-              ? "border-primary bg-primary/20 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]"
-              : "border-border bg-secondary text-secondary-foreground hover:bg-border hover:text-foreground"
-          }`}
+          className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all ${isPlaying && !isRecordingState
+            ? "border-primary bg-primary/20 text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]"
+            : "border-border bg-secondary text-secondary-foreground hover:bg-border hover:text-foreground"
+            }`}
           aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? (
@@ -132,14 +141,14 @@ export default function TransportBar() {
         {/* Record */}
         <button
           onClick={handleRecord}
-          className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all ${
-            isRecording
-              ? "border-destructive bg-destructive/20 text-destructive shadow-[0_0_10px_hsl(var(--destructive)/0.4)] animate-pulse"
-              : "border-border bg-secondary text-destructive/70 hover:bg-border hover:text-destructive"
-          }`}
-          aria-label={isRecording ? "Stop recording" : "Record"}
+          disabled={isConnecting}
+          className={`flex h-9 w-9 items-center justify-center rounded-md border transition-all ${isRecordingState
+            ? "border-destructive bg-destructive/20 text-destructive shadow-[0_0_10px_hsl(var(--destructive)/0.4)] animate-pulse"
+            : "border-border bg-secondary text-destructive/70 hover:bg-border hover:text-destructive"
+            } ${isConnecting ? "opacity-50 cursor-not-allowed" : ""}`}
+          aria-label={isRecordingState ? "Stop recording" : "Record"}
         >
-          <Circle className="h-4 w-4 fill-current" />
+          <Circle className={`h-4 w-4 fill-current ${isConnecting ? "animate-spin" : ""}`} />
         </button>
 
         {/* Time display */}

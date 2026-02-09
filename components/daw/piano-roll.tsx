@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Piano, Volume2, Headphones, Lock } from "lucide-react";
 
 const NOTE_NAMES = [
@@ -67,8 +67,14 @@ const initialNotes: MidiNote[] = [
 const TOTAL_COLS = 32;
 const ROW_HEIGHT = 18;
 
-export default function PianoRoll() {
-  const [notes, setNotes] = useState<MidiNote[]>(initialNotes);
+import { Midi } from "@tonejs/midi";
+
+interface PianoRollProps {
+  midiUrl: string | null;
+}
+
+export default function PianoRoll({ midiUrl }: PianoRollProps) {
+  const [notes, setNotes] = useState<MidiNote[]>([]);
   const [dragState, setDragState] = useState<{
     id: string;
     startX: number;
@@ -78,6 +84,53 @@ export default function PianoRoll() {
   } | null>(null);
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
   const [hoveredKey, setHoveredKey] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!midiUrl) {
+      setNotes([]); // Clear notes if no URL
+      return;
+    }
+
+    async function loadMidi() {
+      try {
+        const midi = await Midi.fromUrl(midiUrl);
+        const newNotes: MidiNote[] = [];
+
+        midi.tracks.forEach(track => {
+          track.notes.forEach((note, index) => {
+            // Map MIDI note to grid
+            // Note: This is a simplified mapping. Real mapping needs BPM and PPQ info.
+            // Assuming 120 BPM for now, 0.5s = 1 beat
+            // note.name like "C4"
+            // note.time (seconds)
+            // note.duration (seconds)
+
+            // Find row index from NOTE_NAMES
+            const rowIndex = NOTE_NAMES.indexOf(note.name);
+            if (rowIndex === -1) return; // Note out of range
+
+            // Approximate column/width mapping (assuming 0.5s per column/beat for demo)
+            // A better approach uses ticks if available or recalculates based on project BPM
+            const col = Math.floor(note.time * 2);
+            const width = Math.max(1, Math.floor(note.duration * 2));
+
+            newNotes.push({
+              id: `n-${index}-${note.time}`,
+              row: rowIndex,
+              col: col,
+              width: width,
+              velocity: note.velocity
+            });
+          });
+        });
+        setNotes(newNotes);
+      } catch (e) {
+        console.error("Failed to load MIDI:", e);
+      }
+    }
+
+    loadMidi();
+  }, [midiUrl]);
 
   const handleNoteMouseDown = useCallback(
     (e: React.MouseEvent, note: MidiNote) => {
@@ -102,10 +155,10 @@ export default function PianoRoll() {
           prev.map((n) =>
             n.id === note.id
               ? {
-                  ...n,
-                  col: Math.max(0, Math.min(TOTAL_COLS - n.width, note.col + colDelta)),
-                  row: Math.max(0, Math.min(NOTE_NAMES.length - 1, note.row + rowDelta)),
-                }
+                ...n,
+                col: Math.max(0, Math.min(TOTAL_COLS - n.width, note.col + colDelta)),
+                row: Math.max(0, Math.min(NOTE_NAMES.length - 1, note.row + rowDelta)),
+              }
               : n
           )
         );
@@ -167,11 +220,10 @@ export default function PianoRoll() {
                 key={note}
                 onMouseEnter={() => setHoveredKey(i)}
                 onMouseLeave={() => setHoveredKey(null)}
-                className={`flex items-center justify-end pr-2 border-b transition-colors ${
-                  black
-                    ? "bg-[hsl(220,20%,10%)] border-[hsl(220,15%,14%)] text-muted-foreground/60"
-                    : "bg-[hsl(220,15%,16%)] border-[hsl(220,15%,14%)] text-muted-foreground/80"
-                } ${hoveredKey === i ? "!bg-primary/20 !text-primary" : ""}`}
+                className={`flex items-center justify-end pr-2 border-b transition-colors ${black
+                  ? "bg-[hsl(220,20%,10%)] border-[hsl(220,15%,14%)] text-muted-foreground/60"
+                  : "bg-[hsl(220,15%,16%)] border-[hsl(220,15%,14%)] text-muted-foreground/80"
+                  } ${hoveredKey === i ? "!bg-primary/20 !text-primary" : ""}`}
                 style={{ height: ROW_HEIGHT }}
                 aria-label={`Play note ${note}`}
               >
@@ -193,11 +245,10 @@ export default function PianoRoll() {
         {NOTE_NAMES.map((note, i) => (
           <div
             key={note}
-            className={`absolute left-0 right-0 border-b ${
-              isBlackKey(note)
-                ? "bg-[hsl(220,18%,7%)] border-[hsl(var(--border)/0.2)]"
-                : "bg-[hsl(var(--track-surface))] border-[hsl(var(--border)/0.2)]"
-            }`}
+            className={`absolute left-0 right-0 border-b ${isBlackKey(note)
+              ? "bg-[hsl(220,18%,7%)] border-[hsl(var(--border)/0.2)]"
+              : "bg-[hsl(var(--track-surface))] border-[hsl(var(--border)/0.2)]"
+              }`}
             style={{ top: i * ROW_HEIGHT, height: ROW_HEIGHT }}
           />
         ))}
@@ -227,11 +278,10 @@ export default function PianoRoll() {
             tabIndex={0}
             aria-label={`MIDI note ${NOTE_NAMES[note.row]} at beat ${note.col + 1}, duration ${note.width} beats. Drag to move.`}
             onMouseDown={(e) => handleNoteMouseDown(e, note)}
-            className={`absolute rounded-[3px] cursor-grab active:cursor-grabbing transition-shadow ${
-              selectedNote === note.id
-                ? "ring-1 ring-[hsl(var(--neon-magenta))] shadow-[0_0_8px_hsl(var(--neon-magenta)/0.4)] z-10"
-                : "hover:shadow-[0_0_6px_hsl(var(--neon-magenta)/0.3)] z-0"
-            } ${dragState?.id === note.id ? "opacity-90" : ""}`}
+            className={`absolute rounded-[3px] cursor-grab active:cursor-grabbing transition-shadow ${selectedNote === note.id
+              ? "ring-1 ring-[hsl(var(--neon-magenta))] shadow-[0_0_8px_hsl(var(--neon-magenta)/0.4)] z-10"
+              : "hover:shadow-[0_0_6px_hsl(var(--neon-magenta)/0.3)] z-0"
+              } ${dragState?.id === note.id ? "opacity-90" : ""}`}
             style={{
               top: note.row * ROW_HEIGHT + 2,
               left: `${(note.col / TOTAL_COLS) * 100}%`,

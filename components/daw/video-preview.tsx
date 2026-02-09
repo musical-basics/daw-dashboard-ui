@@ -1,8 +1,46 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { Video, Camera, MonitorOff } from "lucide-react";
 
 export default function VideoPreview() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function setupCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+        setError("Camera access denied or unavailable");
+      }
+    }
+
+    setupCamera();
+
+    return () => {
+      // Cleanup stream tracks? 
+      // Usually good practice, but for a preview that stays mounted it might be okay.
+      // If we want to be strict:
+      /*
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+      */
+    };
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -24,10 +62,28 @@ export default function VideoPreview() {
       </div>
 
       {/* Video area */}
-      <div className="flex-1 flex items-center justify-center bg-background/50 m-2 rounded-md border border-border relative overflow-hidden">
+      <div className="flex-1 flex items-center justify-center bg-black m-2 rounded-md border border-border relative overflow-hidden">
         {/* Aspect ratio container */}
-        <div className="w-full aspect-video max-h-full relative flex items-center justify-center">
-          {/* Scanline overlay */}
+        <div className="w-full h-full relative flex items-center justify-center">
+
+          {error ? (
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <MonitorOff className="h-10 w-10 opacity-40" />
+              <span className="text-xs font-mono tracking-wider opacity-60">
+                {error}
+              </span>
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-contain"
+            />
+          )}
+
+          {/* Scanline overlay - keep this for style */}
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.03]"
             style={{
@@ -36,38 +92,20 @@ export default function VideoPreview() {
             }}
           />
 
-          {/* Center content */}
-          <div className="flex flex-col items-center gap-3 text-muted-foreground">
-            <div className="relative">
-              <MonitorOff className="h-10 w-10 opacity-40" />
-              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive/60 animate-pulse" />
-            </div>
-            <span className="text-xs font-mono tracking-wider opacity-60">
-              NO SIGNAL
-            </span>
-            <button className="text-[10px] font-mono tracking-wider border border-border rounded px-3 py-1 text-muted-foreground hover:text-primary hover:border-primary/50 transition-all">
-              CONNECT WEBCAM
-            </button>
-          </div>
-
           {/* Corner markers */}
-          <div className="absolute top-2 left-2 h-4 w-4 border-l-2 border-t-2 border-primary/30" />
-          <div className="absolute top-2 right-2 h-4 w-4 border-r-2 border-t-2 border-primary/30" />
-          <div className="absolute bottom-2 left-2 h-4 w-4 border-l-2 border-b-2 border-primary/30" />
-          <div className="absolute bottom-2 right-2 h-4 w-4 border-r-2 border-b-2 border-primary/30" />
+          <div className="absolute top-2 left-2 h-4 w-4 border-l-2 border-t-2 border-primary/30 pointer-events-none" />
+          <div className="absolute top-2 right-2 h-4 w-4 border-r-2 border-t-2 border-primary/30 pointer-events-none" />
+          <div className="absolute bottom-2 left-2 h-4 w-4 border-l-2 border-b-2 border-primary/30 pointer-events-none" />
+          <div className="absolute bottom-2 right-2 h-4 w-4 border-r-2 border-b-2 border-primary/30 pointer-events-none" />
 
-          {/* Recording indicator */}
-          <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-50">
+          {/* Recording indicator - This could be hooked up to global state later */}
+          {/* <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-50">
             <span className="text-[9px] font-mono text-muted-foreground">
               REC
             </span>
             <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          </div>
+          </div> */}
 
-          {/* Timecode overlay */}
-          <div className="absolute bottom-3 left-3 text-[10px] font-mono text-muted-foreground/50 tabular-nums">
-            00:00:00:00
-          </div>
         </div>
       </div>
     </div>

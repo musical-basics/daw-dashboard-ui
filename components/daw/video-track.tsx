@@ -9,7 +9,11 @@ const videoClips = [
   { start: 76, width: 20, label: "Interview.mp4" },
 ];
 
-export default function VideoTrack() {
+interface VideoTrackProps {
+  videoUrl: string | null;
+}
+
+export default function VideoTrack({ videoUrl }: VideoTrackProps) {
   return (
     <div className="flex border-b border-border group">
       {/* Track header */}
@@ -45,7 +49,7 @@ export default function VideoTrack() {
       </div>
 
       {/* Track content */}
-      <div className="flex-1 relative h-16 bg-[hsl(var(--track-surface))]">
+      <div className="flex-1 relative h-16 bg-[hsl(var(--track-surface))] overflow-hidden">
         {/* Grid lines */}
         <div className="absolute inset-0 flex">
           {Array.from({ length: 24 }).map((_, i) => (
@@ -63,13 +67,12 @@ export default function VideoTrack() {
         </div>
 
         {/* Video clips */}
-        {videoClips.map((clip, i) => (
+        {videoUrl ? (
           <div
-            key={i}
             className="absolute top-1.5 bottom-1.5 rounded-sm border border-[hsl(210,100%,55%)]/40 bg-[hsl(210,100%,55%)]/15 cursor-pointer hover:bg-[hsl(210,100%,55%)]/25 hover:border-[hsl(210,100%,55%)]/60 transition-all group/clip"
             style={{
-              left: `${clip.start}%`,
-              width: `${clip.width}%`,
+              left: `0%`,
+              width: `100%`, // Spanning full width for now as "one take"
             }}
           >
             {/* Thumbnail lines */}
@@ -83,13 +86,20 @@ export default function VideoTrack() {
               ))}
             </div>
             <div className="absolute top-1 left-1.5 text-[9px] font-mono text-[hsl(210,100%,70%)] truncate max-w-[calc(100%-12px)]">
-              {clip.label}
+              {videoUrl.split('/').pop()}
             </div>
             {/* Resize handles */}
             <div className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover/clip:opacity-100 bg-[hsl(210,100%,55%)]/40 rounded-l-sm transition-opacity" />
             <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize opacity-0 group-hover/clip:opacity-100 bg-[hsl(210,100%,55%)]/40 rounded-r-sm transition-opacity" />
           </div>
-        ))}
+        ) : (
+          // Placeholder or empty state if needed, or keeping dummy clips optionally?
+          // For this task, "replace dummy clips" implies removing them or only showing if url exists.
+          // Showing nothing if no URL for clarity.
+          <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground/30 font-mono">
+            NO CLIP
+          </div>
+        )}
       </div>
     </div>
   );

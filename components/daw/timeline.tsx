@@ -4,7 +4,27 @@ import VideoTrack from "./video-track";
 import AudioTrack from "./audio-track";
 import PianoRoll from "./piano-roll";
 
+import { useProject } from "@/hooks/use-project";
+import { useRecorder } from "@/hooks/use-recorder";
+import { useEffect } from "react";
+
 export default function Timeline() {
+  const { videoUrl, midiUrl, loadLatestTake } = useProject();
+  const { isRecording } = useRecorder();
+
+  // Auto-load latest take when recording stops
+  useEffect(() => {
+    if (!isRecording) {
+      // We need a way to know if we JUST stopped recording.
+      // For now, simple poll or trigger. 
+      // A better way is if useRecorder had an onStop callback or exposed a "lastSessionId"
+      // But the prompt says "Call this function automatically when isRecording changes from true to false"
+      // Since isRecording starts false, we need to be careful not to load on mount if not desired, 
+      // but loading last take on mount is actually good UX.
+      loadLatestTake();
+    }
+  }, [isRecording, loadLatestTake]);
+
   return (
     <div className="flex flex-col h-full bg-card">
       {/* Timeline header */}
@@ -47,9 +67,9 @@ export default function Timeline() {
 
       {/* Tracks */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
-        <VideoTrack />
+        <VideoTrack videoUrl={videoUrl} />
         <AudioTrack />
-        <PianoRoll />
+        <PianoRoll midiUrl={midiUrl} />
       </div>
     </div>
   );

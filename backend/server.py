@@ -1,4 +1,50 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
+import os
+import glob
+
+# ... (existing imports)
+
+# Mount recordings directory
+if not os.path.exists("recordings"):
+    os.makedirs("recordings")
+app.mount("/files", StaticFiles(directory="recordings"), name="recordings")
+
+# ... (existing code)
+
+@app.get("/recordings/latest")
+def get_latest_recording():
+    # Find the most recent session ID based on file modification times
+    # Or just parse filenames if they are timestamped consistently
+    try:
+        # Get all files in recordings dir
+        files = glob.glob("recordings/*")
+        if not files:
+            return {"video": None, "audio": None, "midi": None}
+            
+        # Group by session ID (naive approach: split by underscore)
+        # files like session_2023..._video.mp4
+        
+        # Sort by modification time
+        latest_file = max(files, key=os.path.getctime)
+        # Extract session ID from filename (e.g. "session_20231027_120000")
+        basename = os.path.basename(latest_file)
+        # Assuming format: session_TIMESTAMP_TYPE.ext
+        parts = basename.split('_')
+        if len(parts) >= 3:
+            session_id = f"{parts[0]}_{parts[1]}_{parts[2]}"
+        else:
+            return {"video": None, "audio": None, "midi": None}
+
+        return {
+            "video": f"http://localhost:8000/files/{session_id}_video.mp4",
+            "audio": f"http://localhost:8000/files/{session_id}_audio.wav",
+            "midi": f"http://localhost:8000/files/{session_id}_midi.mid"
+        }
+    except Exception as e:
+        print(f"Error getting latest: {e}")
+        return {"video": None, "audio": None, "midi": None}
+
+# ... (rest of the file)
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
