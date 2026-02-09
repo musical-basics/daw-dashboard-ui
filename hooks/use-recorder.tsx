@@ -22,8 +22,8 @@ export function useRecorder(): RecorderState & RecorderActions {
         setError(null);
         try {
             // Read settings from localStorage
-            const savedAudio = localStorage.getItem("daw_audio_device");
-            const savedMidi = localStorage.getItem("daw_midi_device");
+            const savedAudio = localStorage.getItem("audioDeviceIndex");
+            const savedMidi = localStorage.getItem("midiPortName");
 
             const audioIndex = savedAudio && savedAudio !== "default" ? parseInt(savedAudio) : null;
             const midiPort = savedMidi && savedMidi !== "none" ? savedMidi : null;

@@ -1,14 +1,23 @@
-node_modules/**
-.git/**
-.next/**
-dist/**
+
+# Common ignores
+node_modules/
+.next/
+.env*.local
 .DS_Store
-pnpm-lock.yaml
+.git/
+
+# Backend stuff
+__pycache__/
+backend/__pycache__/
+.venv/
+venv/
+recordings/
+
+# Repomix output
 repomix-output.xml
 repomix-output.txt
-**/*.svg
-**/*.png
-**/*.jpg
-**/*.jpeg
-**/*.ico
-**/*.gif
+
+# Lockfiles (optional, but usually good to ignore for LLM context unless debugging dependecies)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
