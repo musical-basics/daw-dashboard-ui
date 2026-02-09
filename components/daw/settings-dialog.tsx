@@ -6,42 +6,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner"; // Assuming sonner is available, or remove if not
 
 export default function SettingsDialog() {
+    const [open, setOpen] = useState(false);
     const [ports, setPorts] = useState<{ audio_devices: any[], midi_ports: string[] }>({ audio_devices: [], midi_ports: [] });
     const [selectedAudio, setSelectedAudio] = useState<string>("");
     const [selectedMidi, setSelectedMidi] = useState<string>("");
 
+    // Load settings when dialog opens
     useEffect(() => {
-        fetch("http://localhost:8000/ports")
-            .then(res => res.json())
-            .then(data => setPorts(data))
-            .catch(err => console.error("Failed to fetch ports", err));
+        if (open) {
+            // Fetch ports
+            fetch("http://localhost:8000/ports")
+                .then(res => res.json())
+                .then(data => setPorts(data))
+                .catch(err => console.error("Failed to fetch ports", err));
 
-        // Load saved settings
-        const savedAudio = localStorage.getItem("daw_audio_device"); // user prompt used "audioDeviceIndex", but I used "daw_audio_device" in recorder hook. I should stick to one. User's prompt code uses "audioDeviceIndex". Use what user provided to be safe/consistent with their new code? 
-        // Wait, the user provided code uses "audioDeviceIndex". My recorder hook used "daw_audio_device". 
-        // I should update the recorder hook to match or update this code to match.
-        // User said "Execute Phase 7... Update the Recorder to use the selected devices."
-        // User's provided code for `SettingsDialog` uses `audioDeviceIndex`.
-        // I will use `audioDeviceIndex` and `midiPortName` as per user code, and I will need to update `use-recorder.tsx` to match.
-        // Actually, let's just stick to what the user provided in the prompt for this file.
+            // Reset to saved values
+            // Note: mixing keys "daw_audio_device" vs "audioDeviceIndex" caused confusion earlier.
+            // Sticking to "audioDeviceIndex" and "midiPortName" as requested by user.
+            const savedAudio = localStorage.getItem("audioDeviceIndex");
+            const savedMidi = localStorage.getItem("midiPortName");
 
-        // User code:
-        // const savedAudio = localStorage.getItem("audioDeviceIndex");
-        // const savedMidi = localStorage.getItem("midiPortName");
+            setSelectedAudio(savedAudio || "");
+            setSelectedMidi(savedMidi || "");
+        }
+    }, [open]);
 
-        if (localStorage.getItem("audioDeviceIndex")) setSelectedAudio(localStorage.getItem("audioDeviceIndex")!);
-        if (localStorage.getItem("midiPortName")) setSelectedMidi(localStorage.getItem("midiPortName")!);
-    }, []);
-
-    const handleSave = (key: string, value: string) => {
-        localStorage.setItem(key, value);
-        // You could also trigger a toast notification here
+    const handleSave = () => {
+        if (selectedAudio) localStorage.setItem("audioDeviceIndex", selectedAudio);
+        if (selectedMidi) localStorage.setItem("midiPortName", selectedMidi);
+        setOpen(false);
+        // Optional: toast.success("Settings saved");
     };
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Settings">
                     <Settings className="h-5 w-5" />
@@ -58,12 +59,13 @@ export default function SettingsDialog() {
                         <Label>Audio Input (Microphone)</Label>
                         <Select
                             value={selectedAudio}
-                            onValueChange={(val) => { setSelectedAudio(val); handleSave("audioDeviceIndex", val); }}
+                            onValueChange={setSelectedAudio}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select Microphone" />
                             </SelectTrigger>
                             <SelectContent>
+                                {ports.audio_devices.length === 0 && <SelectItem value="none" disabled>No devices found</SelectItem>}
                                 {ports.audio_devices.map((device: any) => (
                                     <SelectItem key={device.index} value={device.index.toString()}>
                                         {device.name}
@@ -78,12 +80,13 @@ export default function SettingsDialog() {
                         <Label>MIDI Input (Keyboard)</Label>
                         <Select
                             value={selectedMidi}
-                            onValueChange={(val) => { setSelectedMidi(val); handleSave("midiPortName", val); }}
+                            onValueChange={setSelectedMidi}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Select MIDI Device" />
                             </SelectTrigger>
                             <SelectContent>
+                                {ports.midi_ports.length === 0 && <SelectItem value="none" disabled>No devices found</SelectItem>}
                                 {ports.midi_ports.map((port: string) => (
                                     <SelectItem key={port} value={port}>
                                         {port}
@@ -93,6 +96,16 @@ export default function SettingsDialog() {
                         </Select>
                     </div>
 
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleSave}>
+                        Save
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>
