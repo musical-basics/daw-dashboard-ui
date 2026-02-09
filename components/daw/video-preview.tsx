@@ -1,24 +1,33 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef } from "react";
 import { Video, Camera, MonitorOff } from "lucide-react";
 
-export default function VideoPreview() {
-  const videoRef = useRef<HTMLVideoElement>(null);
+interface VideoPreviewProps {
+  videoUrl: string | null;
+}
+
+const VideoPreview = forwardRef<HTMLVideoElement, VideoPreviewProps>(({ videoUrl }, ref) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (videoUrl) return; // Playback mode
+
+    let stream: MediaStream | null = null;
+
     async function setupCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 1280 },
             height: { ideal: 720 }
           }
         });
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        // Safe ref access
+        if (ref && typeof ref !== 'function' && ref.current) {
+          ref.current.srcObject = stream;
+          ref.current.src = "";
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
@@ -29,17 +38,12 @@ export default function VideoPreview() {
     setupCamera();
 
     return () => {
-      // Cleanup stream tracks? 
-      // Usually good practice, but for a preview that stays mounted it might be okay.
-      // If we want to be strict:
-      /*
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      // Cleanup if switching modes?
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
       }
-      */
     };
-  }, []);
+  }, [videoUrl, ref]);
 
   return (
     <div className="flex flex-col h-full">
@@ -48,17 +52,19 @@ export default function VideoPreview() {
         <div className="flex items-center gap-2">
           <Video className="h-3.5 w-3.5 text-primary" />
           <span className="text-xs font-mono font-medium text-foreground tracking-wider">
-            VIDEO PREVIEW
+            {videoUrl ? "PLAYBACK" : "LIVE PREVIEW"}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <button
-            className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-secondary transition-colors"
-            aria-label="Toggle camera"
-          >
-            <Camera className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {!videoUrl && (
+          <div className="flex items-center gap-1">
+            <button
+              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-secondary transition-colors"
+              aria-label="Toggle camera"
+            >
+              <Camera className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Video area */}
@@ -66,7 +72,7 @@ export default function VideoPreview() {
         {/* Aspect ratio container */}
         <div className="w-full h-full relative flex items-center justify-center">
 
-          {error ? (
+          {error && !videoUrl ? (
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <MonitorOff className="h-10 w-10 opacity-40" />
               <span className="text-xs font-mono tracking-wider opacity-60">
@@ -75,15 +81,16 @@ export default function VideoPreview() {
             </div>
           ) : (
             <video
-              ref={videoRef}
-              autoPlay
-              muted
+              ref={ref}
+              src={videoUrl || undefined}
+              autoPlay={!videoUrl}
+              muted={!videoUrl}
               playsInline
               className="w-full h-full object-contain"
             />
           )}
 
-          {/* Scanline overlay - keep this for style */}
+          {/* Scanline overlay */}
           <div
             className="absolute inset-0 pointer-events-none opacity-[0.03]"
             style={{
@@ -98,16 +105,11 @@ export default function VideoPreview() {
           <div className="absolute bottom-2 left-2 h-4 w-4 border-l-2 border-b-2 border-primary/30 pointer-events-none" />
           <div className="absolute bottom-2 right-2 h-4 w-4 border-r-2 border-b-2 border-primary/30 pointer-events-none" />
 
-          {/* Recording indicator - This could be hooked up to global state later */}
-          {/* <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-50">
-            <span className="text-[9px] font-mono text-muted-foreground">
-              REC
-            </span>
-            <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          </div> */}
-
         </div>
       </div>
     </div>
   );
-}
+});
+
+VideoPreview.displayName = "VideoPreview";
+export default VideoPreview;
