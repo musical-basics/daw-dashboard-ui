@@ -129,6 +129,8 @@ def stop_recording():
     session_id = recorder.stop_recording()
     return {"status": "stopped", "session_id": session_id}
 
+@app.get("/ports")
+def get_ports():
     return {
         "audio_devices": recorder.get_audio_devices(),
         "midi_ports": recorder.get_midi_ports(),
