@@ -34,7 +34,10 @@ export function useProject() {
 
             if (data.video || data.midi) {
                 toast.success("Timeline updated with latest take");
+            } else if (!data.video && !data.midi && !data.audio) {
+                // No valid take found
             }
+
         } catch (error) {
             console.error("Error loading latest take:", error);
             // toast.error("Failed to load latest take"); // Optional: suppress if just empty

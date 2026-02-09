@@ -46,10 +46,13 @@ def get_latest_recording():
         else:
             return {"video": None, "audio": None, "midi": None}
 
+        midi_path = f"recordings/{session_id}_midi.mid"
+        midi_url = f"http://localhost:8000/files/{session_id}_midi.mid" if os.path.exists(midi_path) else None
+
         return {
             "video": f"http://localhost:8000/files/{session_id}_video.mp4",
             "audio": f"http://localhost:8000/files/{session_id}_audio.wav",
-            "midi": f"http://localhost:8000/files/{session_id}_midi.mid"
+            "midi": midi_url
         }
     except Exception as e:
         print(f"Error getting latest: {e}")
