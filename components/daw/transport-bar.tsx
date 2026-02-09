@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { SkipBack, Play, Square, Circle, Pause, ChevronDown } from "lucide-react";
 import { useRecorder } from "@/hooks/use-recorder";
+import { useMidiIn } from "@/hooks/use-midi-in";
 import { ExportModal } from "./export-modal";
 import SettingsDialog from "./settings-dialog";
 import FileBrowser from "./file-browser";
@@ -16,6 +17,7 @@ interface TransportBarProps {
 
 export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, currentTime }: TransportBarProps) {
   const { isRecording: isRecordingState, isConnecting, startRecording, stopRecording } = useRecorder();
+  const { isActivityDetected } = useMidiIn();
   const [bpm, setBpm] = useState(120);
   const [bpmEditing, setBpmEditing] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
@@ -32,7 +34,7 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
       await stopRecording();
     } else {
       await startRecording();
-      onPlay();
+      if (!isPlaying) onPlay();
     }
   };
 
@@ -85,6 +87,11 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
       <div className="flex items-center gap-3">
         {/* ADD SETTINGS HERE */}
         <SettingsDialog />
+
+        {/* Activity Light */}
+        <div className="relative flex items-center justify-center w-5 h-5" title="MIDI Activity">
+          <div className={`w-2.5 h-2.5 rounded-full transition-all duration-75 ${isActivityDetected ? "bg-green-500 shadow-[0_0_8px_#22c55e]" : "bg-muted-foreground/30"}`} />
+        </div>
 
         <div className="h-5 w-px bg-border" />
 

@@ -11,9 +11,8 @@ interface TimelineProps {
 }
 
 export default function Timeline({ videoUrl, midiUrl, currentTime }: TimelineProps) {
-  // Simple mapping: 32 columns = 16 seconds (assuming 0.5s per column/beat)
-  // This is just a visualization heuristic.
-  const playheadLeft = `${Math.min(100, (currentTime / 16) * 100)}%`;
+  // Simple mapping: 120 columns = 60 seconds (assuming 0.5s per column/beat)
+  const playheadLeft = `${Math.min(100, (currentTime / 60) * 100)}%`;
 
   return (
     <div className="flex flex-col h-full bg-card">
@@ -29,7 +28,7 @@ export default function Timeline({ videoUrl, midiUrl, currentTime }: TimelinePro
         {/* Time ruler */}
         <div className="flex-1 relative h-7 bg-[hsl(var(--track-surface))]">
           <div className="absolute inset-0 flex items-end">
-            {Array.from({ length: 32 }).map((_, i) => (
+            {Array.from({ length: 120 }).map((_, i) => (
               <div
                 key={i}
                 className="flex-1 flex flex-col items-start"
@@ -59,7 +58,7 @@ export default function Timeline({ videoUrl, midiUrl, currentTime }: TimelinePro
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         <VideoTrack videoUrl={videoUrl} />
         <AudioTrack />
-        <PianoRoll midiUrl={midiUrl} />
+        <PianoRoll midiUrl={midiUrl} currentTime={currentTime} />
       </div>
     </div>
   );

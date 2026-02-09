@@ -64,7 +64,7 @@ const initialNotes: MidiNote[] = [
   { id: "n18", row: 11, col: 30, width: 2, velocity: 0.65 },
 ];
 
-const TOTAL_COLS = 32;
+const TOTAL_COLS = 120;
 const ROW_HEIGHT = 18;
 
 import { Midi } from "@tonejs/midi";
@@ -73,8 +73,17 @@ interface PianoRollProps {
   midiUrl: string | null;
 }
 
-export default function PianoRoll({ midiUrl }: PianoRollProps) {
+import { useMidiIn } from "@/hooks/use-midi-in";
+
+interface PianoRollProps {
+  midiUrl: string | null;
+  currentTime: number;
+}
+
+export default function PianoRoll({ midiUrl, currentTime }: PianoRollProps) {
+  const { activeNotes } = useMidiIn();
   const [notes, setNotes] = useState<MidiNote[]>([]);
+  // ... (keep existing state)
   const [dragState, setDragState] = useState<{
     id: string;
     startX: number;
@@ -92,25 +101,16 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
     }
 
     async function loadMidi() {
+      if (!midiUrl) return;
       try {
         const midi = await Midi.fromUrl(midiUrl);
         const newNotes: MidiNote[] = [];
 
         midi.tracks.forEach(track => {
           track.notes.forEach((note, index) => {
-            // Map MIDI note to grid
-            // Note: This is a simplified mapping. Real mapping needs BPM and PPQ info.
-            // Assuming 120 BPM for now, 0.5s = 1 beat
-            // note.name like "C4"
-            // note.time (seconds)
-            // note.duration (seconds)
-
-            // Find row index from NOTE_NAMES
             const rowIndex = NOTE_NAMES.indexOf(note.name);
-            if (rowIndex === -1) return; // Note out of range
+            if (rowIndex === -1) return;
 
-            // Approximate column/width mapping (assuming 0.5s per column/beat for demo)
-            // A better approach uses ticks if available or recalculates based on project BPM
             const col = Math.floor(note.time * 2);
             const width = Math.max(1, Math.floor(note.duration * 2));
 
@@ -134,6 +134,7 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
 
   const handleNoteMouseDown = useCallback(
     (e: React.MouseEvent, note: MidiNote) => {
+      // ... (keep existing handler)
       e.stopPropagation();
       e.preventDefault();
       setSelectedNote(note.id);
@@ -180,16 +181,18 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
     <div className="flex border-b border-border">
       {/* Track header */}
       <div className="w-44 shrink-0 border-r border-border bg-card flex flex-col">
+        {/* ... (keep header content) */}
         <div className="px-3 py-2">
           <div className="flex items-center gap-2 mb-1.5">
-            <div className="h-5 w-5 rounded bg-[hsl(var(--neon-magenta))]/20 flex items-center justify-center">
-              <Piano className="h-3 w-3 text-[hsl(var(--neon-magenta))]" />
+            <div className={`h-5 w-5 rounded transition-colors flex items-center justify-center ${activeNotes.length > 0 ? "bg-[hsl(var(--neon-cyan))]/20 shadow-[0_0_8px_hsl(var(--neon-cyan)/0.6)]" : "bg-[hsl(var(--neon-magenta))]/20"}`}>
+              <Piano className={`h-3 w-3 ${activeNotes.length > 0 ? "text-[hsl(var(--neon-cyan))]" : "text-[hsl(var(--neon-magenta))]"}`} />
             </div>
             <span className="text-xs font-mono font-medium text-foreground tracking-wider">
-              MIDI 1
+              MIDI 1 ({activeNotes.length})
             </span>
           </div>
           <div className="flex items-center gap-1">
+            {/* ... (keep icons) */}
             <button
               className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Mute MIDI"
@@ -215,15 +218,20 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
         <div className="flex-1 flex flex-col">
           {NOTE_NAMES.map((note, i) => {
             const black = isBlackKey(note);
+            // Check if this key is being pressed
+            const isPressed = activeNotes.some(n => n.name === note);
+
             return (
               <button
                 key={note}
                 onMouseEnter={() => setHoveredKey(i)}
                 onMouseLeave={() => setHoveredKey(null)}
-                className={`flex items-center justify-end pr-2 border-b transition-colors ${black
-                  ? "bg-[hsl(220,20%,10%)] border-[hsl(220,15%,14%)] text-muted-foreground/60"
-                  : "bg-[hsl(220,15%,16%)] border-[hsl(220,15%,14%)] text-muted-foreground/80"
-                  } ${hoveredKey === i ? "!bg-primary/20 !text-primary" : ""}`}
+                className={`flex items-center justify-end pr-2 border-b transition-colors ${isPressed
+                  ? "!bg-[hsl(var(--neon-cyan))]/30 !text-[hsl(var(--neon-cyan))] !border-[hsl(var(--neon-cyan))]/50"
+                  : black
+                    ? "bg-[hsl(220,20%,10%)] border-[hsl(220,15%,14%)] text-muted-foreground/60"
+                    : "bg-[hsl(220,15%,16%)] border-[hsl(220,15%,14%)] text-muted-foreground/80"
+                  } ${hoveredKey === i && !isPressed ? "!bg-primary/20 !text-primary" : ""}`}
                 style={{ height: ROW_HEIGHT }}
                 aria-label={`Play note ${note}`}
               >
@@ -270,12 +278,13 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
           ))}
         </div>
 
-        {/* MIDI notes */}
+        {/* Recorded MIDI notes */}
         {notes.map((note) => (
           <div
             key={note.id}
             role="button"
             tabIndex={0}
+            // ... (keep props)
             aria-label={`MIDI note ${NOTE_NAMES[note.row]} at beat ${note.col + 1}, duration ${note.width} beats. Drag to move.`}
             onMouseDown={(e) => handleNoteMouseDown(e, note)}
             className={`absolute rounded-[3px] cursor-grab active:cursor-grabbing transition-shadow ${selectedNote === note.id
@@ -291,7 +300,7 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
               borderLeft: `2px solid hsl(var(--neon-magenta) / ${note.velocity})`,
             }}
           >
-            {/* Velocity indicator */}
+            {/* ... (keep inner divs) */}
             <div
               className="absolute bottom-0 left-0 right-0 rounded-b-[3px]"
               style={{
@@ -299,13 +308,43 @@ export default function PianoRoll({ midiUrl }: PianoRollProps) {
                 background: `hsl(var(--neon-magenta) / 0.15)`,
               }}
             />
-            {/* Right resize handle */}
             <div className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 hover:opacity-100 bg-[hsl(var(--neon-magenta)/0.5)] rounded-r-[3px]" />
           </div>
         ))}
 
+        {/* LIVE MIDI Overlay */}
+        {activeNotes.map((note, i) => {
+          const rowIndex = NOTE_NAMES.indexOf(note.name);
+          if (rowIndex === -1) return null;
+
+          // Calculate growing width
+          const elapsed = (Date.now() / 1000) - note.startTime;
+          // Map to grid columns (0.5s = 1 col)
+          // Start position should basically track the playhead if recording?
+          // Simplified: Head is at currentTime, Tail is at (currentTime - elapsed)
+          // So StartCol = (currentTime - elapsed) * 2
+
+          const startCol = (currentTime - elapsed) * 2;
+          const width = Math.max(0.2, elapsed * 2);
+
+          return (
+            <div
+              key={`live-${i}`}
+              className="absolute rounded-[3px] z-30 pointer-events-none shadow-[0_0_15px_hsl(var(--neon-cyan)/0.6)]"
+              style={{
+                top: rowIndex * ROW_HEIGHT + 2,
+                left: `${(startCol / TOTAL_COLS) * 100}%`,
+                width: `${(width / TOTAL_COLS) * 100}%`,
+                height: ROW_HEIGHT - 4,
+                background: `linear-gradient(135deg, hsl(var(--neon-cyan)), hsl(var(--neon-cyan) / 0.7))`,
+                border: `1px solid hsl(var(--neon-cyan))`,
+              }}
+            />
+          );
+        })}
+
         {/* Playhead */}
-        <div className="absolute top-0 bottom-0 w-px bg-primary/60 z-20 pointer-events-none" style={{ left: "15%" }}>
+        <div className="absolute top-0 bottom-0 w-px bg-primary/60 z-20 pointer-events-none" style={{ left: `${(currentTime / 16) * 100}%` }}>
           <div className="absolute -top-0.5 -left-1 w-2 h-2 bg-primary rotate-45" />
         </div>
       </div>
