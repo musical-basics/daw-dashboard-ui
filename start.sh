@@ -39,7 +39,7 @@ echo "Frontend is ready!"
 
 # 3. Start Electron
 echo "Starting Electron..."
-npm run electron
+pnpm electron
 
 # When Electron exits, kill everything
 cleanup
