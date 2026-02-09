@@ -41,6 +41,7 @@ interface MidiNote {
   col: number;
   width: number;
   velocity: number;
+  isRecording?: boolean; // New flag for styling
 }
 
 const initialNotes: MidiNote[] = [
@@ -78,10 +79,11 @@ import { useMidiIn } from "@/hooks/use-midi-in";
 interface PianoRollProps {
   midiUrl: string | null;
   currentTime: number;
+  isRecording: boolean; // Receive this prop
 }
 
-export default function PianoRoll({ midiUrl, currentTime }: PianoRollProps) {
-  const { activeNotes } = useMidiIn();
+export default function PianoRoll({ midiUrl, currentTime, isRecording }: PianoRollProps) {
+  const { activeNotes, recordedNotes } = useMidiIn(isRecording);
   const [notes, setNotes] = useState<MidiNote[]>([]);
   // ... (keep existing state)
   const [dragState, setDragState] = useState<{
@@ -278,7 +280,7 @@ export default function PianoRoll({ midiUrl, currentTime }: PianoRollProps) {
           ))}
         </div>
 
-        {/* Recorded MIDI notes */}
+        {/* Recorded MIDI notes from FILE */}
         {notes.map((note) => (
           <div
             key={note.id}
@@ -312,7 +314,33 @@ export default function PianoRoll({ midiUrl, currentTime }: PianoRollProps) {
           </div>
         ))}
 
-        {/* LIVE MIDI Overlay */}
+        {/* LIVE RECORDING BUFFER NOTES */}
+        {recordedNotes.map((n, i) => {
+          const rowIndex = NOTE_NAMES.indexOf(n.name);
+          if (rowIndex === -1) return null;
+
+          const startCol = n.startTime * 2;
+          // If finished, use duration. If not, grow to currentTime!
+          const duration = n.isFinished ? n.duration! : (currentTime - n.startTime);
+          const width = Math.max(0.2, duration * 2);
+
+          return (
+            <div
+              key={`rec-${i}`}
+              className="absolute rounded-[3px] border-l-2 transition-all bg-red-500/40 border-red-500 z-20"
+              style={{
+                top: rowIndex * ROW_HEIGHT + 2,
+                left: `${(startCol / TOTAL_COLS) * 100}%`,
+                width: `${(width / TOTAL_COLS) * 100}%`,
+                height: ROW_HEIGHT - 4,
+              }}
+            >
+              <div className="absolute bottom-0 left-0 right-0 bg-black/20" style={{ height: `${(1 - n.velocity) * 100}%` }} />
+            </div>
+          )
+        })}
+
+        {/* LIVE PLAYING OVERLAY (Just the keys lighting up, basically) */}
         {activeNotes.map((note, i) => {
           const rowIndex = NOTE_NAMES.indexOf(note.name);
           if (rowIndex === -1) return null;

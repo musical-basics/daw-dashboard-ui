@@ -44,7 +44,7 @@ export default function Page() {
 
         {/* Timeline (right/bottom) */}
         <div className="flex-1 min-w-0 min-h-0">
-          <Timeline videoUrl={videoUrl} midiUrl={midiUrl} currentTime={currentTime} />
+          <Timeline videoUrl={videoUrl} midiUrl={midiUrl} currentTime={currentTime} isRecording={isRecording} />
         </div>
       </div>
 
@@ -78,10 +78,10 @@ export default function Page() {
               <div
                 key={i}
                 className={`h-2 w-1 rounded-sm ${i < 3
-                    ? "bg-accent"
-                    : i < 4
-                      ? "bg-[hsl(45,100%,50%)]"
-                      : "bg-border"
+                  ? "bg-accent"
+                  : i < 4
+                    ? "bg-[hsl(45,100%,50%)]"
+                    : "bg-border"
                   }`}
               />
             ))}

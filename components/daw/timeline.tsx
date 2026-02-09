@@ -8,9 +8,10 @@ interface TimelineProps {
   videoUrl: string | null;
   midiUrl: string | null;
   currentTime: number;
+  isRecording?: boolean; // Pass this down
 }
 
-export default function Timeline({ videoUrl, midiUrl, currentTime }: TimelineProps) {
+export default function Timeline({ videoUrl, midiUrl, currentTime, isRecording = false }: TimelineProps) {
   // Simple mapping: 120 columns = 60 seconds (assuming 0.5s per column/beat)
   const playheadLeft = `${Math.min(100, (currentTime / 60) * 100)}%`;
 
@@ -58,7 +59,23 @@ export default function Timeline({ videoUrl, midiUrl, currentTime }: TimelinePro
       <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
         <VideoTrack videoUrl={videoUrl} />
         <AudioTrack />
-        <PianoRoll midiUrl={midiUrl} currentTime={currentTime} />
+        {/* Piano Roll Container */}
+        <div className="relative">
+          <PianoRoll midiUrl={midiUrl} currentTime={currentTime} isRecording={isRecording} />
+
+          {/* "ABLETON STYLE" GROWING CLIP OVERLAY (Optional Visual wrapper) */}
+          {/* If you want the whole track background to change color during recording: */}
+          {isRecording && (
+            <div
+              className="absolute top-0 bottom-0 bg-red-500/5 pointer-events-none border-r-2 border-red-500/50"
+              style={{
+                left: 0,
+                width: playheadLeft,
+                transition: 'width 0.1s linear'
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

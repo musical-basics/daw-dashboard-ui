@@ -17,7 +17,17 @@ recordings/
 repomix-output.xml
 repomix-output.txt
 
-# Lockfiles (optional, but usually good to ignore for LLM context unless debugging dependecies)
+# Lockfiles
 pnpm-lock.yaml
 package-lock.json
 yarn.lock
+
+# Non-essential / Boilerplate
+components/ui/
+public/
+*.config.*
+.eslintrc.json
+tsconfig.json
+.gitignore
+.repomixignore
+electron-main.js.map

@@ -1,17 +1,29 @@
 import { useState, useEffect, useRef } from 'react';
 import { WebMidi } from 'webmidi';
+import * as Tone from 'tone';
 
 export interface ActiveNote {
     note: number;
     name: string;
     velocity: number;
     startTime: number;
+    duration?: number; // Added duration
+    isFinished?: boolean; // To track if noteOff has happened
 }
 
-export function useMidiIn() {
+// Accept isRecording state
+export function useMidiIn(isRecording: boolean = false) {
     const [activeNotes, setActiveNotes] = useState<ActiveNote[]>([]);
+    const [recordedNotes, setRecordedNotes] = useState<ActiveNote[]>([]); // New local buffer
     const [isActivityDetected, setIsActivityDetected] = useState(false);
     const lastActivityTime = useRef<number>(0);
+
+    // Reset local notes when recording starts/stops
+    useEffect(() => {
+        if (isRecording) {
+            setRecordedNotes([]);
+        }
+    }, [isRecording]);
 
     useEffect(() => {
         let midiInput: any = null;
@@ -45,23 +57,42 @@ export function useMidiIn() {
 
                 // Note On
                 input.addListener("noteon", e => {
-                    const note = {
+                    const now = Tone.Transport.seconds; // Sync with Timeline
+
+                    const note: ActiveNote = {
                         note: e.note.number,
                         name: e.note.name + e.note.octave,
                         velocity: (e as any).velocity || 0.5,
-                        startTime: Date.now() / 1000 // seconds
+                        startTime: now
                     };
 
                     setActiveNotes(prev => [...prev, note]);
 
-                    // Activity Light
+                    // RECORDING LOGIC
+                    if (isRecording) {
+                        setRecordedNotes(prev => [...prev, { ...note, isFinished: false }]);
+                    }
+
                     setIsActivityDetected(true);
                     lastActivityTime.current = Date.now();
                 });
 
                 // Note Off
                 input.addListener("noteoff", e => {
+                    const now = Tone.Transport.seconds;
+
                     setActiveNotes(prev => prev.filter(n => n.note !== e.note.number));
+
+                    // RECORDING LOGIC
+                    if (isRecording) {
+                        setRecordedNotes(prev => prev.map(n => {
+                            // Find the matching note that hasn't finished yet
+                            if (n.note === e.note.number && !n.isFinished) {
+                                return { ...n, duration: now - n.startTime, isFinished: true };
+                            }
+                            return n;
+                        }));
+                    }
 
                     setIsActivityDetected(true);
                     lastActivityTime.current = Date.now();
@@ -98,7 +129,7 @@ export function useMidiIn() {
                 window.removeEventListener("midi-port-changed", handlePortChange);
             }
         };
-    }, []);
+    }, [isRecording]); // Re-bind if recording state changes to ensure closure captures it? 
 
-    return { activeNotes, isActivityDetected };
+    return { activeNotes, recordedNotes, isActivityDetected };
 }
