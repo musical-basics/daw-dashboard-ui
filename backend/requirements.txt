@@ -4,4 +4,6 @@ opencv-python
 pyaudio
 mido
 python-rtmidi
+dawdreamer
+
 

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { SkipBack, Play, Square, Circle, Pause, ChevronDown } from "lucide-react";
 import { useRecorder } from "@/hooks/use-recorder";
+import { ExportModal } from "./export-modal";
 
 interface TransportBarProps {
   isPlaying: boolean;
@@ -15,6 +16,7 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
   const { isRecording: isRecordingState, isConnecting, startRecording, stopRecording } = useRecorder();
   const [bpm, setBpm] = useState(120);
   const [bpmEditing, setBpmEditing] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const handlePlay = () => isPlaying ? onStop() : onPlay();
 
@@ -89,6 +91,16 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
           <span className="text-xs text-muted-foreground font-mono">4/4</span>
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </div>
+
+        {/* Export Button */}
+        <button
+          onClick={() => setExportOpen(true)}
+          className="ml-2 flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          EXPORT
+        </button>
+
+        <ExportModal open={exportOpen} onOpenChange={setExportOpen} />
       </div>
     </header>
   );

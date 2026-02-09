@@ -88,5 +88,30 @@ def get_ports():
         "midi_ports": recorder.get_midi_ports()
     }
 
+from .renderer import render_project
+
+class ExportRequest(BaseModel):
+    session_id: str
+    vst_path: str
+
+@app.post("/export")
+def export_session(req: ExportRequest, background_tasks: BackgroundTasks):
+    # Verify session exists (simple check)
+    if not os.path.exists(f"recordings/{req.session_id}_midi.mid"):
+        return {"status": "error", "message": "Session MIDI not found"}
+        
+    # Run export (blocking for now for simplicity, or background?)
+    # Prompt suggestion: "Processing..." status or block.
+    # Let's block for now as it's easier to handle "success" in frontend without polling.
+    # But rendering takes 5-10s.
+    
+    try:
+        output_filename = render_project(req.session_id, req.vst_path)
+        output_url = f"http://localhost:8000/files/{output_filename}"
+        return {"status": "done", "url": output_url}
+    except Exception as e:
+        print(f"Export failed: {e}")
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
