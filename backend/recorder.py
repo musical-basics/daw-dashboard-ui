@@ -90,12 +90,24 @@ class MultiTrackRecorder:
         self.channels = channels # Update class var for saving later
         
         try:
-            stream = p.open(format=self.format,
-                            channels=self.channels,
-                            rate=self.rate,
-                            input=True,
-                            input_device_index=device_index,
-                            frames_per_buffer=self.chunk)
+            # Try preferred channels first
+            try:
+                stream = p.open(format=self.format,
+                                channels=self.channels,
+                                rate=self.rate,
+                                input=True,
+                                input_device_index=device_index,
+                                frames_per_buffer=self.chunk)
+            except OSError:
+                # Fallback to mono if stereo fails (or vice versa)
+                print("Fallback to mono recording")
+                self.channels = 1
+                stream = p.open(format=self.format,
+                                channels=self.channels,
+                                rate=self.rate,
+                                input=True,
+                                input_device_index=device_index,
+                                frames_per_buffer=self.chunk)
         except Exception as e:
             print(f"Error opening audio stream: {e}")
             p.terminate()
