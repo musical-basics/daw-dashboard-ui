@@ -8,11 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // Assuming sonner is available, or remove if not
 
-export default function SettingsDialog() {
-    const [open, setOpen] = useState(false);
-    const [ports, setPorts] = useState<{ audio_devices: any[], midi_ports: string[] }>({ audio_devices: [], midi_ports: [] });
+// Lifted state for controlled component
+interface SettingsDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export default function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+    const [ports, setPorts] = useState<{ audio_devices: any[], midi_ports: string[], video_devices: any[] }>({ audio_devices: [], midi_ports: [], video_devices: [] });
+    // Use string type explicitly
     const [selectedAudio, setSelectedAudio] = useState<string>("");
     const [selectedMidi, setSelectedMidi] = useState<string>("");
+    const [selectedVideo, setSelectedVideo] = useState<string>("");
 
     // Load settings when dialog opens
     useEffect(() => {
@@ -20,32 +27,45 @@ export default function SettingsDialog() {
             // Fetch ports
             fetch("http://localhost:8000/ports")
                 .then(res => res.json())
-                .then(data => setPorts(data))
+                .then(data => setPorts({
+                    audio_devices: data.audio_devices || [],
+                    midi_ports: data.midi_ports || [],
+                    video_devices: data.video_devices || []
+                }))
                 .catch(err => console.error("Failed to fetch ports", err));
 
             // Reset to saved values
-            // Note: mixing keys "daw_audio_device" vs "audioDeviceIndex" caused confusion earlier.
-            // Sticking to "audioDeviceIndex" and "midiPortName" as requested by user.
             const savedAudio = localStorage.getItem("audioDeviceIndex");
             const savedMidi = localStorage.getItem("midiPortName");
+            const savedVideo = localStorage.getItem("videoDeviceIndex");
 
             setSelectedAudio(savedAudio || "");
             setSelectedMidi(savedMidi || "");
+            setSelectedVideo(savedVideo || "0"); // Default to 0
         }
     }, [open]);
 
     const handleSave = () => {
-        if (selectedAudio) localStorage.setItem("audioDeviceIndex", selectedAudio);
-        if (selectedMidi) {
-            localStorage.setItem("midiPortName", selectedMidi);
-            window.dispatchEvent(new Event("midi-port-changed"));
+        // Ensure we save the string value
+        if (selectedAudio !== "") {
+            localStorage.setItem("audioDeviceIndex", selectedAudio);
         }
-        setOpen(false);
-        // Optional: toast.success("Settings saved");
+        if (selectedVideo !== "") {
+            localStorage.setItem("videoDeviceIndex", selectedVideo);
+        }
+        if (selectedMidi !== "") {
+            localStorage.setItem("midiPortName", selectedMidi);
+            // Dispatch event for other components to pick up immediately
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new Event("midi-port-changed"));
+            }
+        }
+        onOpenChange(false);
+        toast.success("Settings saved");
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" title="Settings">
                     <Settings className="h-5 w-5" />
@@ -56,6 +76,27 @@ export default function SettingsDialog() {
                     <DialogTitle>Hardware Settings</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+
+                    {/* Video Input */}
+                    <div className="grid gap-2">
+                        <Label>Video Input (Camera)</Label>
+                        <Select
+                            value={selectedVideo}
+                            onValueChange={setSelectedVideo}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Camera" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {ports.video_devices.length === 0 && <SelectItem value="0">Default Camera (0)</SelectItem>}
+                                {ports.video_devices.map((device: any) => (
+                                    <SelectItem key={device.index} value={device.index.toString()}>
+                                        {device.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
                     {/* Audio Input */}
                     <div className="grid gap-2">
@@ -103,7 +144,7 @@ export default function SettingsDialog() {
 
                 {/* Footer Buttons */}
                 <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setOpen(false)}>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
                     <Button onClick={handleSave}>

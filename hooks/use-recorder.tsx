@@ -24,9 +24,11 @@ export function useRecorder(): RecorderState & RecorderActions {
             // Read settings from localStorage
             const savedAudio = localStorage.getItem("audioDeviceIndex");
             const savedMidi = localStorage.getItem("midiPortName");
+            const savedVideo = localStorage.getItem("videoDeviceIndex");
 
             const audioIndex = savedAudio && savedAudio !== "default" ? parseInt(savedAudio) : null;
             const midiPort = savedMidi && savedMidi !== "none" ? savedMidi : null;
+            const videoIndex = savedVideo ? parseInt(savedVideo) : 0;
 
             const response = await fetch('http://localhost:8000/record/start', {
                 method: 'POST',
@@ -34,7 +36,7 @@ export function useRecorder(): RecorderState & RecorderActions {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    video_device_index: 0,
+                    video_device_index: videoIndex,
                     audio_device_index: audioIndex,
                     midi_port_name: midiPort,
                 }),

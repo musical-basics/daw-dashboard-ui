@@ -177,3 +177,13 @@ class MultiTrackRecorder:
 
     def get_midi_ports(self):
         return mido.get_input_names()
+
+    def get_video_devices(self):
+        devices = []
+        # Checks the first 5 indexes
+        for i in range(5):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                devices.append({"index": i, "name": f"Camera {i}"})
+                cap.release()
+        return devices

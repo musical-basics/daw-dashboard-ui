@@ -109,7 +109,8 @@ def stop_recording():
 def get_ports():
     return {
         "audio_devices": recorder.get_audio_devices(),
-        "midi_ports": recorder.get_midi_ports()
+        "midi_ports": recorder.get_midi_ports(),
+        "video_devices": recorder.get_video_devices()
     }
 
 from .renderer import render_project

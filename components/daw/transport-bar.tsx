@@ -13,9 +13,11 @@ interface TransportBarProps {
   onStop: () => void;
   onRewind: () => void;
   currentTime: number;
+  settingsOpen: boolean;
+  onOpenSettings: (open: boolean) => void;
 }
 
-export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, currentTime }: TransportBarProps) {
+export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, currentTime, settingsOpen, onOpenSettings }: TransportBarProps) {
   const { isRecording: isRecordingState, isConnecting, startRecording, stopRecording } = useRecorder();
   const { isActivityDetected } = useMidiIn();
   const [bpm, setBpm] = useState(120);
@@ -86,7 +88,8 @@ export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, curr
       {/* Right: Settings & Export */}
       <div className="flex items-center gap-3">
         {/* ADD SETTINGS HERE */}
-        <SettingsDialog />
+        {/* ADD SETTINGS HERE */}
+        <SettingsDialog open={settingsOpen} onOpenChange={onOpenSettings} />
 
         {/* Activity Light */}
         <div className="relative flex items-center justify-center w-5 h-5" title="MIDI Activity">

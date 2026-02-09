@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import TransportBar from "@/components/daw/transport-bar";
 import VideoPreview from "@/components/daw/video-preview";
 import Timeline from "@/components/daw/timeline";
@@ -9,13 +9,16 @@ import { useProject } from "@/hooks/use-project";
 import { useMidiOut } from "@/hooks/use-midi-out";
 import { usePlayback } from "@/hooks/use-playback";
 import { useRecorder } from "@/hooks/use-recorder";
+import { toast } from "sonner"; // For shortcuts feedback if needed
 
 export default function Page() {
   const { videoUrl, midiUrl, loadLatestTake } = useProject();
   const midiOut = useMidiOut();
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isPlaying, currentTime, play, stop, rewind } = usePlayback(videoRef, midiUrl, midiOut);
-  const { isRecording } = useRecorder();
+  const { isRecording, startRecording, stopRecording } = useRecorder();
+
+  const [settingsOpen, setSettingsOpen] = useState(false); // Lifted state for shortcuts
 
   // Auto-load latest take when recording stops
   useEffect(() => {
@@ -23,6 +26,37 @@ export default function Page() {
       loadLatestTake();
     }
   }, [isRecording, loadLatestTake]);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case " ": // Space: Toggle Play/Pause
+          e.preventDefault(); // Prevent scrolling
+          if (isPlaying) stop();
+          else play();
+          break;
+        case "r": // r: Toggle Record
+          if (isRecording) await stopRecording();
+          else {
+            await startRecording();
+            if (!isPlaying) play(); // Auto-play when recording starts
+          }
+          break;
+        case "s": // s: Open Settings
+          setSettingsOpen(prev => !prev);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isPlaying, isRecording, play, stop, startRecording, stopRecording]);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -33,6 +67,8 @@ export default function Page() {
         onStop={stop}
         onRewind={rewind}
         currentTime={currentTime}
+        settingsOpen={settingsOpen}
+        onOpenSettings={setSettingsOpen}
       />
 
       {/* Main area */}
