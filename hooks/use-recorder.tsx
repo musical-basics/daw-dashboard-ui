@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 interface RecorderState {
@@ -16,8 +16,44 @@ export function useRecorder(): RecorderState & RecorderActions {
     const [isRecording, setIsRecording] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // True while a start/stop request is in flight, so the status sync doesn't race it
+    const busyRef = useRef(false);
+
+    // The backend is the source of truth: pick up a recording that's already running
+    // (e.g. after a reload) and notice when it ends on its own (time limit, backend restart)
+    useEffect(() => {
+        let cancelled = false;
+
+        const sync = async () => {
+            if (busyRef.current) return;
+            try {
+                const res = await fetch('http://localhost:8000/record/status');
+                const data = await res.json();
+                if (cancelled || busyRef.current) return;
+
+                if (isRecording && !data.is_recording) {
+                    toast.info("Recording stopped", {
+                        description: `Recordings stop automatically after ${Math.round(data.max_seconds / 60)} minutes`
+                    });
+                }
+                setIsRecording(data.is_recording);
+            } catch {
+                // Backend not reachable; keep the current state
+            }
+        };
+
+        sync();
+        if (!isRecording) return () => { cancelled = true; };
+
+        const interval = setInterval(sync, 2000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [isRecording]);
 
     const startRecording = useCallback(async () => {
+        busyRef.current = true;
         setIsConnecting(true);
         setError(null);
         try {
@@ -74,11 +110,13 @@ export function useRecorder(): RecorderState & RecorderActions {
             toast.error(`Recording Error: ${message}`);
             console.error('Start recording error:', err);
         } finally {
+            busyRef.current = false;
             setIsConnecting(false);
         }
     }, []);
 
     const stopRecording = useCallback(async () => {
+        busyRef.current = true;
         setIsConnecting(true);
         try {
             const response = await fetch('http://localhost:8000/record/stop', {
@@ -101,6 +139,7 @@ export function useRecorder(): RecorderState & RecorderActions {
             toast.error(`Stop Error: ${message}`);
             console.error('Stop recording error:', err);
         } finally {
+            busyRef.current = false;
             setIsConnecting(false);
         }
     }, []);

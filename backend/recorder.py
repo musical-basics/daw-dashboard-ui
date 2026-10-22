@@ -9,6 +9,9 @@ import subprocess
 import re
 from datetime import datetime
 
+# Safety limit so a forgotten recording can't fill the disk
+MAX_RECORDING_SECONDS = 60 * 60
+
 class MultiTrackRecorder:
     def __init__(self, recordings_dir="recordings"):
         self.recordings_dir = recordings_dir
@@ -16,8 +19,14 @@ class MultiTrackRecorder:
             os.makedirs(self.recordings_dir)
             
         self.is_recording = False
+        self.is_saving = False
         self.start_time = None
-        
+        self.session_id = None
+
+        # Serializes start/stop so the auto-stop timer, the API and shutdown can't overlap
+        self._lock = threading.Lock()
+        self._auto_stop_timer = None
+
         # Audio config
         self.chunk = 1024
         self.format = pyaudio.paInt16
@@ -36,42 +45,62 @@ class MultiTrackRecorder:
         self.threads = []
 
     def start_recording(self, video_device_index=0, audio_device_index=None, midi_port_name=None):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.session_id = f"session_{timestamp}"
-        
-        self.is_recording = True
-        self.start_time = time.time()
-        self.audio_frames = []
-        self.midi_messages = []
-        
-        # Start Audio Thread
-        self.audio_thread = threading.Thread(target=self._record_audio, args=(audio_device_index,))
-        self.audio_thread.start()
-        
-        # Start Video Thread
-        self.video_thread = threading.Thread(target=self._record_video, args=(video_device_index,))
-        self.video_thread.start()
-        
-        # Start MIDI Thread (if port provided)
-        if midi_port_name:
-            self.midi_thread = threading.Thread(target=self._record_midi, args=(midi_port_name,))
-            self.midi_thread.start()
-            
+        with self._lock:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.session_id = f"session_{timestamp}"
+
+            self.is_recording = True
+            self.start_time = time.time()
+            self.audio_frames = []
+            self.midi_messages = []
+
+            # Start Audio Thread
+            self.audio_thread = threading.Thread(target=self._record_audio, args=(audio_device_index,))
+            self.audio_thread.start()
+
+            # Start Video Thread
+            self.video_thread = threading.Thread(target=self._record_video, args=(video_device_index,))
+            self.video_thread.start()
+
+            # Start MIDI Thread (if port provided)
+            if midi_port_name:
+                self.midi_thread = threading.Thread(target=self._record_midi, args=(midi_port_name,))
+                self.midi_thread.start()
+
+            self._auto_stop_timer = threading.Timer(MAX_RECORDING_SECONDS, self._auto_stop)
+            self._auto_stop_timer.daemon = True
+            self._auto_stop_timer.start()
+
         print(f"Recording started: {self.session_id}")
 
     def stop_recording(self):
-        self.is_recording = False
-        
-        if hasattr(self, 'audio_thread'):
-            self.audio_thread.join()
-        if hasattr(self, 'video_thread'):
-            self.video_thread.join()
-        if hasattr(self, 'midi_thread'):
-            self.midi_thread.join()
-            
-        self._save_midi()
+        with self._lock:
+            if not self.is_recording:
+                return self.session_id
+
+            self.is_saving = True
+            self.is_recording = False
+            if self._auto_stop_timer:
+                self._auto_stop_timer.cancel()
+
+            try:
+                if hasattr(self, 'audio_thread'):
+                    self.audio_thread.join()
+                if hasattr(self, 'video_thread'):
+                    self.video_thread.join()
+                if hasattr(self, 'midi_thread'):
+                    self.midi_thread.join()
+
+                self._save_midi()
+            finally:
+                self.is_saving = False
+
         print(f"Recording stopped: {self.session_id}")
         return self.session_id
+
+    def _auto_stop(self):
+        print(f"Max recording length ({MAX_RECORDING_SECONDS // 60} min) reached, stopping {self.session_id}")
+        self.stop_recording()
 
     def _record_audio(self, device_index):
         p = pyaudio.PyAudio()

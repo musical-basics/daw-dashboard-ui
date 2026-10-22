@@ -16,7 +16,7 @@ export default function Page() {
   const midiOut = useMidiOut();
   const videoRef = useRef<HTMLVideoElement>(null);
   const { isPlaying, currentTime, play, stop, rewind } = usePlayback(videoRef, midiUrl, midiOut);
-  const { isRecording, startRecording, stopRecording } = useRecorder();
+  const { isRecording, isConnecting, startRecording, stopRecording } = useRecorder();
 
   const [settingsOpen, setSettingsOpen] = useState(false); // Lifted state for shortcuts
 
@@ -66,6 +66,10 @@ export default function Page() {
         onPlay={play}
         onStop={stop}
         onRewind={rewind}
+        isRecording={isRecording}
+        isConnecting={isConnecting}
+        onStartRecording={startRecording}
+        onStopRecording={stopRecording}
         currentTime={currentTime}
         settingsOpen={settingsOpen}
         onOpenSettings={setSettingsOpen}

@@ -3,11 +3,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from contextlib import asynccontextmanager
 import os
 import glob
+import signal
 import uvicorn
 import json
-from .recorder import MultiTrackRecorder
+from .recorder import MultiTrackRecorder, MAX_RECORDING_SECONDS
 
 CONFIG_FILE = "config.json"
 
@@ -24,7 +26,14 @@ def save_config(config):
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=4)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    # Finish an active recording on shutdown, otherwise the video is left without its index and won't play
+    if recorder.is_recording:
+        recorder.stop_recording()
+
+app = FastAPI(lifespan=lifespan)
 
 # Enable CORS for localhost:3000
 app.add_middleware(
@@ -129,6 +138,15 @@ def stop_recording():
     session_id = recorder.stop_recording()
     return {"status": "stopped", "session_id": session_id}
 
+@app.get("/record/status")
+def recording_status():
+    return {
+        # Still "recording" while files are being saved, so the UI doesn't load a half-written take
+        "is_recording": recorder.is_recording or recorder.is_saving,
+        "session_id": recorder.session_id,
+        "max_seconds": MAX_RECORDING_SECONDS,
+    }
+
 @app.get("/ports")
 def get_ports():
     return {
@@ -181,4 +199,6 @@ def export_session(req: ExportRequest, background_tasks: BackgroundTasks):
         return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
+    # Closing the terminal sends SIGHUP, which uvicorn ignores; turn it into SIGTERM so shutdown still saves the recording
+    signal.signal(signal.SIGHUP, lambda *_: os.kill(os.getpid(), signal.SIGTERM))
     uvicorn.run(app, host="0.0.0.0", port=8000)

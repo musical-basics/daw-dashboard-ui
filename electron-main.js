@@ -24,10 +24,10 @@ function createWindow() {
 
 app.whenReady().then(createWindow);
 
+// Quit on every platform (not just Windows/Linux) so start.sh shuts the backend down
+// and any active recording gets saved, instead of recording on with no window open
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    app.quit();
 });
 
 app.on('activate', () => {

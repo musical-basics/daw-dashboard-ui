@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { SkipBack, Play, Square, Circle, Pause, ChevronDown } from "lucide-react";
-import { useRecorder } from "@/hooks/use-recorder";
 import { useMidiIn } from "@/hooks/use-midi-in";
 import { ExportModal } from "./export-modal";
 import SettingsDialog from "./settings-dialog";
@@ -12,13 +11,17 @@ interface TransportBarProps {
   onPlay: () => void;
   onStop: () => void;
   onRewind: () => void;
+  // Recording state is owned by the page so the "R" shortcut and these buttons stay in sync
+  isRecording: boolean;
+  isConnecting: boolean;
+  onStartRecording: () => Promise<void>;
+  onStopRecording: () => Promise<void>;
   currentTime: number;
   settingsOpen: boolean;
   onOpenSettings: (open: boolean) => void;
 }
 
-export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, currentTime, settingsOpen, onOpenSettings }: TransportBarProps) {
-  const { isRecording: isRecordingState, isConnecting, startRecording, stopRecording } = useRecorder();
+export default function TransportBar({ isPlaying, onPlay, onStop, onRewind, isRecording: isRecordingState, isConnecting, onStartRecording: startRecording, onStopRecording: stopRecording, currentTime, settingsOpen, onOpenSettings }: TransportBarProps) {
   const { isActivityDetected } = useMidiIn();
   const [bpm, setBpm] = useState(120);
   const [bpmEditing, setBpmEditing] = useState(false);
